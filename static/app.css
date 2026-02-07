@@ -252,3 +252,51 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ---- Processing overlay ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.overlay__box {
+  width: min(520px, 92vw);
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(2, 6, 23, 0.88);
+  border-radius: 16px;
+  padding: 18px 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  text-align: center;
+}
+
+.overlay__spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 3px solid rgba(255,255,255,0.20);
+  border-top-color: rgba(255,255,255,0.85);
+  margin: 4px auto 12px;
+  animation: spin 0.9s linear infinite;
+}
+
+.overlay__title {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.overlay__sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -7,6 +7,14 @@
   <link rel="stylesheet" href="/static/app.css" />
 </head>
 <body>
+  <div id="processingOverlay" class="overlay" style="display:none;">
+    <div class="overlay__box">
+      <div class="overlay__spinner"></div>
+      <div class="overlay__title">Processing…</div>
+      <div class="overlay__sub">Uploading and grouping PDFs. Please wait.</div>
+    </div>
+  </div>
+
   <div class="app">
     <header class="header">
       <div class="header__left">
@@ -23,9 +31,8 @@
       <section class="card">
         <div class="card__title">Cluster upload</div>
         <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
-          <button class="btn" type="submit">Cluster</button>
-        </form>
+          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
+</form>
 
         {% if error %}
           <div class="error">{{ error }}</div>
@@ -111,5 +118,22 @@
   </div>
 
   <script src="/static/app.js"></script>
+
+  <script>
+    function showProcessingOverlay() {
+      var el = document.getElementById("processingOverlay");
+      if (el) el.style.display = "flex";
+    }
+    document.addEventListener("submit", function(e) {
+      showProcessingOverlay();
+    }, true);
+    document.addEventListener("change", function(e) {
+      var t = e.target;
+      if (t && t.matches && t.matches('input[type="file"]')) {
+        if (t.files && t.files.length > 0) showProcessingOverlay();
+      }
+    }, true);
+  </script>
+
 </body>
 </html>

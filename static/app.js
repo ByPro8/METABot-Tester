@@ -38,3 +38,21 @@
   // Compare panes use id="tab-cmp-*"
   setupTabs(".tab", "tab-");
 })();
+
+
+// AUTO_SUBMIT_ON_FILE_SELECT
+document.addEventListener("DOMContentLoaded", () => {
+  // Auto-submit any form when a file input gets files selected
+  document.querySelectorAll('input[type="file"]').forEach((inp) => {
+    inp.addEventListener("change", () => {
+      try {
+        if (!inp.files || inp.files.length === 0) return;
+        const form = inp.closest("form");
+        if (!form) return;
+        // Small delay lets the UI update the chosen filename before navigating
+        setTimeout(() => form.submit(), 50);
+      } catch (e) {}
+    });
+  });
+});
+
