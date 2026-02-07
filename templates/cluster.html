@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MetaBot Lab — Cluster</title>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header__left">
+        <div class="logo">MetaBot Lab</div>
+        <div class="sub">Cluster PDFs by “available metadata keys” (presence only) — PythonMeta vs ExifTool</div>
+      </div>
+      <div class="header__right">
+        <a class="pill" href="/" rel="noreferrer">home</a>
+        <a class="pill" href="/healthz" target="_blank" rel="noreferrer">healthz</a>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="card">
+        <div class="card__title">Cluster upload</div>
+        <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
+          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
+          <button class="btn" type="submit">Cluster</button>
+        </form>
+
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if cluster %}
+          <div class="hint">Uploaded: <b>{{ cluster.files|length }}</b> PDFs. Click any filename to open the PDF in a new tab.</div>
+        {% endif %}
+      </section>
+
+      {% if cluster %}
+      <section class="card">
+        <div class="card__title">Groups</div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="pygrp">PythonMeta key-sets</button>
+          <button class="tab" data-tab="exgrp">ExifTool key-sets</button>
+        </div>
+
+        <div class="pane show" id="tab-pygrp">
+          <div class="muted">Groups are based on which metadata keys exist (values ignored). Same keys ⇒ same group.</div>
+
+          {% for g in cluster.python_groups %}
+            <div class="group">
+              <div class="group__head">
+                <div class="badge same">Group {{ g["label"] }}</div>
+                <div class="muted">{{ g["count"] }} file(s) • {{ g["keys"]|length }} keys</div>
+              </div>
+
+              <div class="group__files">
+                {% for f in g["files"] %}
+                  <a class="filelink" href="/view/{{ f }}" target="_blank" rel="noreferrer">{{ f }}</a>
+                {% endfor %}
+              </div>
+
+              <details class="group__keys">
+                <summary>Show keys</summary>
+                <ul class="keylist">
+                  {% for k in g["keys"] %}
+                    <li><code>{{ k }}</code></li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="pane" id="tab-exgrp">
+          <div class="muted">Same idea, but for ExifTool output keys only.</div>
+
+          {% for g in cluster.exif_groups %}
+            <div class="group">
+              <div class="group__head">
+                <div class="badge same">Group {{ g["label"] }}</div>
+                <div class="muted">{{ g["count"] }} file(s) • {{ g["keys"]|length }} keys</div>
+              </div>
+
+              <div class="group__files">
+                {% for f in g["files"] %}
+                  <a class="filelink" href="/view/{{ f }}" target="_blank" rel="noreferrer">{{ f }}</a>
+                {% endfor %}
+              </div>
+
+              <details class="group__keys">
+                <summary>Show keys</summary>
+                <ul class="keylist">
+                  {% for k in g["keys"] %}
+                    <li><code>{{ k }}</code></li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </div>
+          {% endfor %}
+        </div>
+
+      </section>
+      {% else %}
+      <section class="card">
+        <div class="muted">Upload multiple PDFs to see groups A/B/C…</div>
+      </section>
+      {% endif %}
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

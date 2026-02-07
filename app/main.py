@@ -1,0 +1,329 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+from fastapi import FastAPI, File, UploadFile, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from tools.pdf_meta import extract_metadata_logs, extract_metadata_structured
+from tools.cluster_meta_types import build_family_key, short_key
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+UPLOAD_DIR = BASE_DIR / "output" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+app = FastAPI(title="MetaBot Lab")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+def safe_name(name: str) -> str:
+    name = (name or "upload.pdf").replace("/", "_").replace("\\", "_").strip()
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
+    return name
+
+
+def _flatten_struct(struct: Dict[str, Dict[str, str]], prefix: str) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    for section, kv in (struct or {}).items():
+        if not isinstance(kv, dict):
+            continue
+        for k, v in kv.items():
+            if k == "(none)":
+                continue
+            key = f"{prefix}.{section}.{k}"
+            out[key] = "" if v is None else str(v)
+    return out
+
+
+
+def _group_by_keyset(
+    flat_per_file: Dict[str, Dict[str, str]], ignore_keys: set[str]
+) -> List[Dict[str, object]]:
+    """
+    Group files by the SET of available metadata keys (presence/absence only).
+    Returns list of groups with label A/B/C..., keys list, and files.
+    """
+    # build keyset per file
+    keyset_to_files: Dict[frozenset, List[str]] = {}
+    for fn, kv in flat_per_file.items():
+        keys = set(kv.keys()) - set(ignore_keys)
+        fs = frozenset(sorted(keys))
+        keyset_to_files.setdefault(fs, []).append(fn)
+
+    # stable ordering: biggest groups first, then by key count, then name
+    groups = sorted(
+        keyset_to_files.items(),
+        key=lambda it: (-len(it[1]), -len(it[0]), ",".join(sorted(it[1]))),
+    )
+
+    labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    out: List[Dict[str, object]] = []
+    for i, (keyset, files) in enumerate(groups):
+        label = labels[i] if i < len(labels) else f"G{i+1}"
+        out.append({
+            "label": label,
+            "count": len(files),
+            "files": sorted(files),
+            "keys": sorted(list(keyset)),
+        })
+    return out
+
+def _compare_many(
+    flat_per_file: Dict[str, Dict[str, str]], ignore_keys: set[str]
+) -> Tuple[List[Tuple[str, str]], List[Tuple[str, Dict[str, str]]]]:
+    files = list(flat_per_file.keys())
+    all_keys = set()
+    for fn in files:
+        all_keys |= set(flat_per_file[fn].keys())
+
+    all_keys = {k for k in all_keys if k not in ignore_keys}
+
+    same_list: List[Tuple[str, str]] = []
+    diff_list: List[Tuple[str, Dict[str, str]]] = []
+
+    for k in sorted(all_keys):
+        vals: Dict[str, str] = {}
+        missing = False
+        for fn in files:
+            if k not in flat_per_file[fn]:
+                vals[fn] = "(missing)"
+                missing = True
+            else:
+                vals[fn] = flat_per_file[fn][k]
+
+        if not missing:
+            uniq = set(vals.values())
+            if len(uniq) == 1:
+                same_list.append((k, next(iter(uniq))))
+            else:
+                diff_list.append((k, vals))
+        else:
+            diff_list.append((k, vals))
+
+    return same_list, diff_list
+
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "result": None, "compare": None, "error": None},
+    )
+
+
+@app.post("/analyze", response_class=HTMLResponse)
+async def analyze(request: Request, pdf: UploadFile = File(...)):
+    try:
+        name = safe_name(pdf.filename or "upload.pdf")
+        out_path = UPLOAD_DIR / name
+        out_path.write_bytes(await pdf.read())
+
+        logs = extract_metadata_logs(out_path, display_name=name)
+        fam = build_family_key(logs.get("python", ""), logs.get("exiftool", ""))
+        fam_key = short_key(fam)
+
+        result = {
+            "filename": name,
+            "family": fam,
+            "family_key": fam_key,
+            "python_log": logs.get("python", ""),
+            "exif_log": logs.get("exiftool", ""),
+        }
+
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": result, "compare": None, "error": None},
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": None, "compare": None, "error": f"{type(e).__name__}: {e}"},
+        )
+
+
+
+
+@app.post("/cluster", response_class=HTMLResponse)
+async def cluster(request: Request, pdfs: List[UploadFile] = File(...)):
+    """
+    Upload many PDFs and group them by AVAILABLE METADATA KEYS (presence/absence only),
+    separately for PythonMeta vs ExifTool.
+    """
+    try:
+        saved = []
+        for up in pdfs:
+            name = safe_name(up.filename or "upload.pdf")
+            out_path = UPLOAD_DIR / name
+            out_path.write_bytes(await up.read())
+            saved.append(out_path)
+
+        per_file = {}
+        for pth in saved:
+            meta = extract_metadata_structured(pth, display_name=pth.name)
+            per_file[pth.name] = meta
+
+        python_flat = {fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file}
+        exif_flat = {fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file}
+
+        # ignore volatile keys (same idea as /compare)
+        ignore = {
+            # Python volatile
+            "py.System.File Modify Date",
+            "py.System.File Access Date",
+            "py.System.File Inode Change Date",
+            "py.System.Directory",
+            "py.System.File Size",
+            "py.System.File Name",
+            "py.Hashes.SHA256",
+            "py.Hashes.MD5",
+            "py.Hashes.First 1KB SHA256",
+            "py.Hashes.Last  1KB SHA256",
+            # Exif volatile
+            "exif.File:System.FileAccessDate",
+            "exif.File:System.FileInodeChangeDate",
+            "exif.File:System.FileModifyDate",
+            "exif.File:System.Directory",
+            "exif.File:System.FileName",
+            "exif.File:System.FileSize",
+            "exif.File:System.FilePermissions",
+        }
+
+        py_groups = _group_by_keyset(python_flat, ignore_keys=ignore)
+        ex_groups = _group_by_keyset(exif_flat, ignore_keys=ignore)
+
+        result = {
+            "files": sorted(list(per_file.keys())),
+            "python_groups": py_groups,
+            "exif_groups": ex_groups,
+        }
+
+        return templates.TemplateResponse(
+            "cluster.html",
+            {"request": request, "cluster": result, "error": None},
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            "cluster.html",
+            {"request": request, "cluster": None, "error": f"{type(e).__name__}: {e}"},
+        )
+
+
+@app.post("/compare", response_class=HTMLResponse)
+async def compare(request: Request, pdfs: List[UploadFile] = File(...)):
+    try:
+        saved = []
+        for up in pdfs:
+            name = safe_name(up.filename or "upload.pdf")
+            out_path = UPLOAD_DIR / name
+            out_path.write_bytes(await up.read())
+            saved.append(out_path)
+
+        per_file = {}
+        families = {}
+        family_keys = {}
+
+        for p in saved:
+            meta = extract_metadata_structured(p, display_name=p.name)
+            per_file[p.name] = meta
+
+            fam = build_family_key(meta["python_text"], meta["exif_text"])
+            families[p.name] = fam
+            family_keys[p.name] = short_key(fam)
+
+        python_flat = {fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file}
+        exif_flat = {fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file}
+
+        ignore = {
+            # Python volatile
+            "py.System.File Modify Date",
+            "py.System.File Access Date",
+            "py.System.File Inode Change Date",
+            "py.System.Directory",
+            "py.System.File Size",
+            "py.System.File Name",
+            "py.Hashes.SHA256",
+            "py.Hashes.MD5",
+            "py.Hashes.First 1KB SHA256",
+            "py.Hashes.Last  1KB SHA256",
+            # Exif volatile
+            "exif.File:System.FileAccessDate",
+            "exif.File:System.FileInodeChangeDate",
+            "exif.File:System.FileModifyDate",
+            "exif.File:System.Directory",
+            "exif.File:System.FileName",
+            "exif.File:System.FileSize",
+            "exif.File:System.FilePermissions",
+        }
+
+        py_same, py_diff = _compare_many(python_flat, ignore_keys=ignore)
+        ex_same, ex_diff = _compare_many(exif_flat, ignore_keys=ignore)
+
+        uniq_family = set(family_keys.values())
+        family_all_same = (len(uniq_family) == 1)
+
+        compare_result = {
+            "files": list(per_file.keys()),
+            "python": {"same": py_same, "diff": py_diff},
+            "exif": {"same": ex_same, "diff": ex_diff},
+            "families": families,
+            "family_keys": family_keys,
+            "family_all_same": family_all_same,
+        }
+
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": None, "compare": compare_result, "error": None},
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": None, "compare": None, "error": f"{type(e).__name__}: {e}"},
+        )
+
+
+
+
+@app.get("/raw/{filename}")
+def raw_pdf(filename: str):
+    """
+    Serve uploaded PDF bytes for in-browser viewing.
+    """
+    name = safe_name(filename)
+    path = UPLOAD_DIR / name
+    if not path.exists():
+        return Response(status_code=404, content="Not found")
+    # inline => browser opens PDF viewer
+    return FileResponse(
+        str(path),
+        media_type="application/pdf",
+        filename=name,
+        headers={"Content-Disposition": f'inline; filename="{name}"'},
+    )
+
+
+@app.get("/view/{filename}", response_class=HTMLResponse)
+def view_pdf(request: Request, filename: str):
+    """
+    HTML wrapper to force tab title = filename, then embed the PDF.
+    """
+    name = safe_name(filename)
+    path = UPLOAD_DIR / name
+    if not path.exists():
+        return Response(status_code=404, content="Not found")
+    return templates.TemplateResponse(
+        "view.html",
+        {"request": request, "filename": name},
+    )
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
