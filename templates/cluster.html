@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MetaBot Lab — Cluster</title>
-  <link rel="stylesheet" href="/static/app.css" />
+  <link rel="stylesheet" href="/static/cluster.css" />
 </head>
 <body>
   <div id="processingOverlay" class="overlay" style="display:none;">
@@ -31,7 +31,7 @@
       <section class="card">
         <div class="card__title">Cluster upload</div>
         <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
+          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
 </form>
 
         {% if error %}

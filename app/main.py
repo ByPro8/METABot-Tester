@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import time
+import uuid
+
 from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +17,10 @@ from tools.cluster_meta_types import build_family_key, short_key
 BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "output" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# In-memory cache for cluster results (prevents POST refresh resubmission)
+CLUSTER_CACHE: dict[str, dict] = {}
+CLUSTER_TTL_SECONDS = 60 * 60  # 1 hour
 
 app = FastAPI(title="MetaBot Lab")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -108,6 +115,30 @@ def _compare_many(
     return same_list, diff_list
 
 
+
+def _cluster_cache_cleanup() -> None:
+    now = time.time()
+    dead = [
+        k for k, v in CLUSTER_CACHE.items()
+        if (now - float(v.get("ts", now))) > CLUSTER_TTL_SECONDS
+    ]
+    for k in dead:
+        CLUSTER_CACHE.pop(k, None)
+
+
+def _cluster_cache_set(payload: dict) -> str:
+    _cluster_cache_cleanup()
+    cid = str(uuid.uuid4())
+    CLUSTER_CACHE[cid] = {"ts": time.time(), "payload": payload}
+    return cid
+
+
+def _cluster_cache_get(cid: str) -> dict | None:
+    _cluster_cache_cleanup()
+    item = CLUSTER_CACHE.get(cid)
+    return item.get("payload") if item else None
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse(
@@ -147,6 +178,13 @@ async def analyze(request: Request, pdf: UploadFile = File(...)):
         )
 
 
+
+
+
+@app.get("/cluster")
+def cluster_get():
+    # Entry point is home; avoid 405 and avoid browser POST re-submit behavior
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/cluster", response_class=HTMLResponse)
@@ -203,16 +241,24 @@ async def cluster(request: Request, pdfs: List[UploadFile] = File(...)):
             "exif_groups": ex_groups,
         }
 
-        return templates.TemplateResponse(
-            "cluster.html",
-            {"request": request, "cluster": result, "error": None},
-        )
+        cid = _cluster_cache_set({"cluster": result, "error": None})
+        return RedirectResponse(url=f"/cluster/result/{cid}", status_code=303)
 
     except Exception as e:
-        return templates.TemplateResponse(
-            "cluster.html",
-            {"request": request, "cluster": None, "error": f"{type(e).__name__}: {e}"},
-        )
+        cid = _cluster_cache_set({"cluster": None, "error": f"{type(e).__name__}: {e}"})
+        return RedirectResponse(url=f"/cluster/result/{cid}", status_code=303)
+
+
+
+@app.get("/cluster/result/{cid}", response_class=HTMLResponse)
+def cluster_result(request: Request, cid: str):
+    data = _cluster_cache_get(cid)
+    if not data:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "cluster.html",
+        {"request": request, "cluster": data.get("cluster"), "error": data.get("error")},
+    )
 
 
 @app.post("/compare", response_class=HTMLResponse)

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MetaBot Lab</title>
-  <link rel="stylesheet" href="/static/app.css" />
+  <link rel="stylesheet" href="/static/home.css" />
 </head>
 <body>
   <div id="processingOverlay" class="overlay" style="display:none;">
@@ -27,31 +27,43 @@
     </header>
 
     <main class="main">
-      <section class="card">
-        <div class="card__title">Analyze one PDF</div>
-        <form class="form" action="/analyze" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdf" accept="application/pdf" required / onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
-</form>
+            <section class="card">
+        <div class="card__title">Upload</div>
 
-        <div class="sep"></div>
+        <div class="uploadRow">
+          <div class="uploadItem">
+            <div class="uploadItem__title">Analyze one PDF</div>
+            <form class="form" action="/analyze" method="post" enctype="multipart/form-data">
+              <input class="file" type="file" name="pdf" accept="application/pdf" required
+                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+            </form>
+          </div>
 
-        <div class="card__title">Compare multiple PDFs</div>
-        <form class="form" action="/compare" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
-</form>
+          <div class="uploadItem">
+            <div class="uploadItem__title">Compare multiple PDFs</div>
+            <form class="form" action="/compare" method="post" enctype="multipart/form-data">
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required
+                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+            </form>
+          </div>
 
-        <div class="sep"></div>
+          <div class="uploadItem">
+            <div class="uploadItem__title">Cluster by available keys (A/B/C…)</div>
+            <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required
+                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+            </form>
+          </div>
+        </div>
 
-        <div class="card__title">Cluster by available keys (A/B/C…)</div>
-        <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
-</form>
-        <div class="hint">Groups PDFs by which metadata keys exist (values ignored). Separate grouping for PythonMeta vs ExifTool.</div>
+        <div class="hint">Selecting files starts automatically. No buttons.</div>
 
         {% if error %}
           <div class="error">{{ error }}</div>
         {% endif %}
       </section>
+
+
 
       <section class="card">
         <div class="card__title">Output</div>
