@@ -19,11 +19,16 @@ env/
 .idea/
 .vscode/
 
-# Local outputs / uploads (don’t commit user PDFs)
-output/
-uploads/
-tmp/
-
 # Secrets
 .env
 .env.*
+
+# Temporary / scratch
+tmp/
+uploads/
+
+# Output: ignore only uploaded PDFs + runtime junk, KEEP templates/families JSON
+output/uploads/
+output/*.pdf
+output/**/*.pdf
+output/.cache/

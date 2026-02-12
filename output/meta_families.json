@@ -1,0 +1,163 @@
+{
+  "total": 10,
+  "families": [
+    {
+      "family_key": "producer=OpenPDF 1.2.0 | creator= | creatortool= | pdf_version=1.4 | xmp_toolkit= | pages=1 | encrypted=False | linearized=False | obj_est=17 | page0_images=2 | fonts_cnt=2 | xobjects_cnt=2",
+      "count": 10,
+      "files": [
+        "34.pdf",
+        "Teb 03.pdf",
+        "Teb 135.pdf",
+        "Teb 24.pdf",
+        "Teb 27.pdf",
+        "Teb 28.pdf",
+        "Teb 37.pdf",
+        "Teb 38.pdf",
+        "Teb 39.pdf",
+        "Teb 40.pdf"
+      ]
+    }
+  ],
+  "per_file": {
+    "34.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 03.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 135.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 24.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 27.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 28.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 37.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 38.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 39.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    },
+    "Teb 40.pdf": {
+      "producer": "OpenPDF 1.2.0",
+      "creator": "",
+      "creatortool": "",
+      "pdf_version": "1.4",
+      "xmp_toolkit": "",
+      "pages": "1",
+      "encrypted": "False",
+      "linearized": "False",
+      "obj_est": "17",
+      "page0_images": "2",
+      "fonts_cnt": "2",
+      "xobjects_cnt": "2"
+    }
+  }
+}
