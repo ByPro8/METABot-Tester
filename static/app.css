@@ -300,3 +300,8 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.tab:hover {
+  background: rgba(2, 6, 23, 0.45);
+  border-color: rgba(56, 189, 248, 0.25);
+}

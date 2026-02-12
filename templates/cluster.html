@@ -31,7 +31,7 @@
       <section class="card">
         <div class="card__title">Cluster upload</div>
         <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())">
+          <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
 </form>
 
         {% if error %}
@@ -48,8 +48,8 @@
         <div class="card__title">Groups</div>
 
         <div class="tabs">
-          <button class="tab active" data-tab="pygrp">PythonMeta key-sets</button>
-          <button class="tab" data-tab="exgrp">ExifTool key-sets</button>
+          <button type="button" class="tab active" data-tab="pygrp">PythonMeta key-sets</button>
+          <button type="button" class="tab" data-tab="exgrp">ExifTool key-sets</button>
         </div>
 
         <div class="pane show" id="tab-pygrp">
@@ -117,7 +117,7 @@
     </main>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260212"></script>
 
   <script>
     function showProcessingOverlay() {

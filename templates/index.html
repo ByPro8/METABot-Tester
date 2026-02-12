@@ -34,24 +34,21 @@
           <div class="uploadItem">
             <div class="uploadItem__title">Analyze one PDF</div>
             <form class="form" action="/analyze" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdf" accept="application/pdf" required
-                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required / />
             </form>
           </div>
 
           <div class="uploadItem">
             <div class="uploadItem__title">Compare multiple PDFs</div>
             <form class="form" action="/compare" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required
-                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
             </form>
           </div>
 
           <div class="uploadItem">
             <div class="uploadItem__title">Cluster by available keys (A/B/C…)</div>
             <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required
-                     onchange="(this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit())" />
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
             </form>
           </div>
         </div>
@@ -81,9 +78,9 @@
           </div>
 
           <div class="tabs">
-            <button class="tab active" data-tab="python">PythonMeta</button>
-            <button class="tab" data-tab="exif">ExifTool</button>
-            <button class="tab" data-tab="family">Family JSON</button>
+            <button type="button" class="tab active" data-tab="python">PythonMeta</button>
+            <button type="button" class="tab" data-tab="exif">ExifTool</button>
+            <button type="button" class="tab" data-tab="family">Family JSON</button>
           </div>
 
           <pre class="log show" id="tab-python">{{ result.python_log }}</pre>
@@ -113,9 +110,9 @@
           </div>
 
           <div class="tabs">
-            <button class="tab active" data-tab="cmp-python">Compare: PythonMeta</button>
-            <button class="tab" data-tab="cmp-exif">Compare: ExifTool</button>
-            <button class="tab" data-tab="cmp-family">Family Details</button>
+            <button type="button" class="tab active" data-tab="cmp-python">Compare: PythonMeta</button>
+            <button type="button" class="tab" data-tab="cmp-exif">Compare: ExifTool</button>
+            <button type="button" class="tab" data-tab="cmp-family">Family Details</button>
           </div>
 
           <div class="pane show" id="tab-cmp-python">
@@ -213,7 +210,7 @@
     </main>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260212"></script>
 
   <script>
     function showProcessingOverlay() {
