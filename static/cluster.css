@@ -239,6 +239,19 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
   margin-bottom: 8px;
 }
 
+.sectionHead {
+  margin: 14px 0 8px 0;
+  padding: 8px 12px;              /* fixed padding */
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  font-family: var(--mono);       /* forensic look */
+  text-transform: none;
+}
+
 .keylist {
   list-style: none;
   padding: 0;

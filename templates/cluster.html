@@ -70,11 +70,14 @@
 
               <details class="group__keys">
                 <summary>Show keys</summary>
-                <ul class="keylist">
-                  {% for k in g["keys"] %}
-                    <li><code>{{ k }}</code></li>
-                  {% endfor %}
-                </ul>
+                {% for sec in g["keys_grouped"] %}
+                  <div class="sectionHead">--- {{ sec.section }} ---</div>
+                  <ul class="keylist">
+                    {% for t in sec.tags %}
+                      <li><code>{{ t }}</code></li>
+                    {% endfor %}
+                  </ul>
+                {% endfor %}
               </details>
             </div>
           {% endfor %}
@@ -98,11 +101,14 @@
 
               <details class="group__keys">
                 <summary>Show keys</summary>
-                <ul class="keylist">
-                  {% for k in g["keys"] %}
-                    <li><code>{{ k }}</code></li>
-                  {% endfor %}
-                </ul>
+                {% for sec in g["keys_grouped"] %}
+                  <div class="sectionHead">--- {{ sec.section }} ---</div>
+                  <ul class="keylist">
+                    {% for t in sec.tags %}
+                      <li><code>{{ t }}</code></li>
+                    {% endfor %}
+                  </ul>
+                {% endfor %}
               </details>
             </div>
           {% endfor %}

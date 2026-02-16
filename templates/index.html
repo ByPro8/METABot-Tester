@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MetaBot Lab</title>
-  <link rel="stylesheet" href="/static/home.css" />
+  <link rel="stylesheet" href="/static/home.css?v=20260216" />
 </head>
 <body>
   <div id="processingOverlay" class="overlay" style="display:none;">
@@ -51,6 +51,14 @@
               <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
             </form>
           </div>
+
+          <div class="uploadItem">
+            <div class="uploadItem__title">Template check (TEB)</div>
+            <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
+              <input type="hidden" name="template_id" value="TEB_MAIN_V1" />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required / />
+            </form>
+          </div>
         </div>
 
         <div class="hint">Selecting files starts automatically. No buttons.</div>
@@ -87,6 +95,48 @@
           <pre class="log" id="tab-exif">{{ result.exif_log }}</pre>
           <pre class="log" id="tab-family">{{ result.family | tojson(indent=2) }}</pre>
 
+        {% elif template_check %}
+          <div class="kv">
+            <div class="kv__row">
+              <div class="kv__k">File</div>
+              <div class="kv__v"><code>{{ template_check.filename }}</code></div>
+            </div>
+            <div class="kv__row">
+              <div class="kv__k">Template</div>
+              <div class="kv__v"><code class="wrap">{{ template_check.template_id }}</code></div>
+            </div>
+            <div class="kv__row">
+              <div class="kv__k">Status</div>
+              <div class="kv__v">
+                {% if template_check.status == "PASS" %}
+                  <span class="badge same">PASS</span>
+                {% else %}
+                  <span class="badge diff">FAIL</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="kv__row">
+              <div class="kv__k">Counts</div>
+              <div class="kv__v">
+                Extracted keys: <code>{{ template_check.counts.extracted_keys }}</code> |
+                Template keys: <code>{{ template_check.counts.template_keys }}</code> |
+                Extra: <code>{{ template_check.counts.extra_keys }}</code> |
+                Missing: <code>{{ template_check.counts.missing_keys }}</code> |
+                Mismatches: <code>{{ template_check.counts.mismatches }}</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button type="button" class="tab active" data-tab="tchk-report">Template Check</button>
+            <button type="button" class="tab" data-tab="tchk-template">Template (expected)</button>
+            <button type="button" class="tab" data-tab="tchk-extracted">Extracted Exif (filtered)</button>
+          </div>
+
+          <pre class="log show" id="tab-tchk-report">{{ template_check.report_html | safe }}</pre>
+          <pre class="log" id="tab-tchk-template">{{ template_check.template_html | safe }}</pre>
+          <pre class="log" id="tab-tchk-extracted">{{ template_check.extracted_html | safe }}</pre>
+
         {% elif compare %}
           <div class="kv">
             <div class="kv__row">
@@ -122,11 +172,14 @@
                 {% if compare.python.same|length == 0 %}
                   <div class="muted">No shared identical keys (after ignores).</div>
                 {% else %}
-                  <ul class="kvlist">
-                    {% for k,v in compare.python.same %}
-                      <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
-                    {% endfor %}
-                  </ul>
+                  {% for sec in compare.python.same_grouped %}
+                    <div class="sectionHead">--- {{ sec.section }} ---</div>
+                    <ul class="kvlist">
+                      {% for k,v in sec.rows %}
+                        <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
+                      {% endfor %}
+                    </ul>
+                  {% endfor %}
                 {% endif %}
               </div>
 
@@ -135,18 +188,21 @@
                 {% if compare.python.diff|length == 0 %}
                   <div class="muted">No differences.</div>
                 {% else %}
-                  {% for k, vals in compare.python.diff %}
-                    <div class="diffrow">
-                      <div><code class="k">{{ k }}</code></div>
-                      <div class="diffvals">
-                        {% for f in compare.files %}
-                          <div class="diffval">
-                            <div class="diffval__f">{{ f }}</div>
-                            <code class="diffval__v">{{ vals[f] }}</code>
-                          </div>
-                        {% endfor %}
+                  {% for sec in compare.python.diff_grouped %}
+                    <div class="sectionHead">--- {{ sec.section }} ---</div>
+                    {% for row in sec.rows %}
+                      <div class="diffrow">
+                        <div><code class="k">{{ row.tag }}</code></div>
+                        <div class="diffvals">
+                          {% for f in compare.files %}
+                            <div class="diffval">
+                              <div class="diffval__f">{{ f }}</div>
+                              <code class="diffval__v">{{ row.vals[f] }}</code>
+                            </div>
+                          {% endfor %}
+                        </div>
                       </div>
-                    </div>
+                    {% endfor %}
                   {% endfor %}
                 {% endif %}
               </div>
@@ -160,11 +216,14 @@
                 {% if compare.exif.same|length == 0 %}
                   <div class="muted">No shared identical keys (after ignores).</div>
                 {% else %}
-                  <ul class="kvlist">
-                    {% for k,v in compare.exif.same %}
-                      <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
-                    {% endfor %}
-                  </ul>
+                  {% for sec in compare.exif.same_grouped %}
+                    <div class="sectionHead">--- {{ sec.section }} ---</div>
+                    <ul class="kvlist">
+                      {% for k,v in sec.rows %}
+                        <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
+                      {% endfor %}
+                    </ul>
+                  {% endfor %}
                 {% endif %}
               </div>
 
@@ -173,18 +232,21 @@
                 {% if compare.exif.diff|length == 0 %}
                   <div class="muted">No differences.</div>
                 {% else %}
-                  {% for k, vals in compare.exif.diff %}
-                    <div class="diffrow">
-                      <div><code class="k">{{ k }}</code></div>
-                      <div class="diffvals">
-                        {% for f in compare.files %}
-                          <div class="diffval">
-                            <div class="diffval__f">{{ f }}</div>
-                            <code class="diffval__v">{{ vals[f] }}</code>
-                          </div>
-                        {% endfor %}
+                  {% for sec in compare.exif.diff_grouped %}
+                    <div class="sectionHead">--- {{ sec.section }} ---</div>
+                    {% for row in sec.rows %}
+                      <div class="diffrow">
+                        <div><code class="k">{{ row.tag }}</code></div>
+                        <div class="diffvals">
+                          {% for f in compare.files %}
+                            <div class="diffval">
+                              <div class="diffval__f">{{ f }}</div>
+                              <code class="diffval__v">{{ row.vals[f] }}</code>
+                            </div>
+                          {% endfor %}
+                        </div>
                       </div>
-                    </div>
+                    {% endfor %}
                   {% endfor %}
                 {% endif %}
               </div>
@@ -231,6 +293,7 @@
       }
     }, true);
   </script>
+
 
 </body>
 </html>

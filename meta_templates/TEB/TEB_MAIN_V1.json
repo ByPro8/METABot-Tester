@@ -1,0 +1,31 @@
+{
+  "id": "TEB_MAIN_V1",
+  "bank": "TEB",
+  "engine": "exiftool",
+  "notes": "Main TEB family derived from compare/cluster. Exif meaningful keys = 7. Producer=OpenPDF 1.2.0, PDFVersion=1.4, 1 page, not linearized.",
+  "ignore": {
+    "groups": ["ExifTool", "File:System"],
+    "tags": ["CreateDate", "ModifyDate", "CreationDate", "MetadataDate"]
+  },
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.Producer"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.4",
+      "PDF.PageCount": "1",
+      "PDF.Producer": "OpenPDF 1.2.0"
+    }
+  }
+}

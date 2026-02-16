@@ -170,6 +170,19 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
 .kvlist .k { color: rgba(255,255,255,0.92); }
 .kvlist .v { color: rgba(255,255,255,0.85); white-space: pre-wrap; word-break: break-word; }
 
+.sectionHead {
+  margin: 14px 0 8px 0;
+  padding: 8px 12px;              /* fixed padding */
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  font-family: var(--mono);       /* forensic look */
+  text-transform: none;
+}
+
 .diffrow { border-top: 1px solid rgba(255,255,255,0.10); padding-top: 10px; margin-top: 10px; }
 
 .diffvals { display: grid; gap: 8px; margin-top: 8px; }
@@ -330,3 +343,23 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
   font-size: 13px;
   margin-bottom: 10px;
 }
+
+
+/* ---- Template Check coloring (ExifTool) ----
+Notes:
+- The template checker renders safe HTML spans inside the .log blocks.
+- All metadata values are escaped in Python, then injected with Jinja |safe.
+- These classes control pass/fail coloring without touching compare/cluster.
+*/
+.tc-ok { color: rgba(34,197,94,0.95); font-weight: 700; }
+.tc-bad { color: rgba(244,63,94,0.95); font-weight: 700; }
+.tc-dim { color: rgba(255,255,255,0.65); font-weight: 700; }
+
+
+/* ---- Template Check coloring (inside <pre class="log">) ----
+We use high-specificity selectors + !important so colors always apply.
+*/
+.log span.tc-ok { color: rgba(34,197,94,0.95) !important; font-weight: 800; }
+.log span.tc-bad { color: rgba(244,63,94,0.95) !important; font-weight: 800; }
+.log span.tc-dim { color: rgba(255,255,255,0.65) !important; font-weight: 800; }
+
