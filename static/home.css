@@ -136,8 +136,10 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
   border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(2, 6, 23, 0.45);
-  overflow: auto;
-  max-height: 62vh;
+  /* Let the page scroll (no inner vertical scrollbars) */
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.35;
@@ -156,8 +158,10 @@ code.wrap { white-space: pre-wrap; word-break: break-word; }
   border-radius: 12px;
   padding: 12px;
   background: rgba(2, 6, 23, 0.35);
-  overflow: auto;
-  max-height: 62vh;
+  /* Let the page scroll (no inner vertical scrollbars) */
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
 }
 .block.same { background: var(--good); border-color: var(--good-b); }
 .block.diff { background: var(--bad); border-color: var(--bad-b); }
