@@ -363,3 +363,7 @@ We use high-specificity selectors + !important so colors always apply.
 .log span.tc-bad { color: rgba(244,63,94,0.95) !important; font-weight: 800; }
 .log span.tc-dim { color: rgba(255,255,255,0.65) !important; font-weight: 800; }
 
+
+
+/* Template Check: yellow highlight for sent-age */
+.log span.tc-warn { color: rgba(234,179,8,0.95) !important; font-weight: 800; }
