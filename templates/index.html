@@ -68,6 +68,14 @@
           </div>
         </div>
 
+
+          <div class="uploadItem">
+            <div class="uploadItem__title">Template check (Garanti)</div>
+            <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
+              <input type="hidden" name="template_id" value="GARANTI_MAIN_V1" />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required />
+            </form>
+          </div>
         <div class="hint">Selecting files starts automatically. No buttons.</div>
 
         {% if error %}

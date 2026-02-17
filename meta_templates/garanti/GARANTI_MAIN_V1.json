@@ -1,0 +1,90 @@
+{
+  "id": "GARANTI_MAIN_V1",
+  "bank": "GARANTI",
+  "ignore": {
+    "groups": [
+      "ExifTool",
+      "File:System"
+    ],
+    "tags": []
+  },
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+      "PDF.Creator",
+      "PDF.Language",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.Producer",
+      "PDF.Title",
+      "PDF.CreateDate",
+      "PDF.ModifyDate",
+      "XMP:XMP-dc.Format",
+      "XMP:XMP-dc.Title",
+      "XMP:XMP-desc.EmbeddedHref",
+      "XMP:XMP-desc.EmbeddedHrefRef",
+      "XMP:XMP-desc.Version",
+      "XMP:XMP-desc.VersionRef",
+      "XMP:XMP-pdf.Producer",
+      "XMP:XMP-pdfuaid.Part",
+      "XMP:XMP-x.XMPToolkit",
+      "XMP:XMP-xmp.CreatorTool",
+      "XMP:XMP-xmp.CreateDate",
+      "XMP:XMP-xmp.MetadataDate",
+      "XMP:XMP-xmp.ModifyDate",
+      "XMP:XMP-xmpMM.DocumentID",
+      "XMP:XMP-xmpMM.InstanceID"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+      "PDF.Creator": "Adobe LiveCycle Designer 11.0",
+      "PDF.Language": "tr-TR",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.7",
+      "PDF.PageCount": "1",
+      "PDF.Producer": "Adobe Experience Manager forms output",
+      "PDF.Title": "INTERNET_SUBE_DEKONT_INT_TR_EN",
+      "PDF.CreateDate": "2017:05:08 16:43:02+03:00",
+      "XMP:XMP-dc.Format": "application/pdf",
+      "XMP:XMP-dc.Title": "INTERNET_SUBE_DEKONT_INT_TR_EN",
+      "XMP:XMP-desc.EmbeddedHref": ".\\banners\\BBVA_intsube_logo_80.jpg",
+      "XMP:XMP-desc.EmbeddedHrefRef": "/template/subform[1]/subform[1]/subform[1]/subform[1]/draw[3]",
+      "XMP:XMP-desc.Version": "8.2.1.3158.1.475346.466429",
+      "XMP:XMP-desc.VersionRef": "/template/subform[1]",
+      "XMP:XMP-pdf.Producer": "Adobe Experience Manager forms output",
+      "XMP:XMP-pdfuaid.Part": "1",
+      "XMP:XMP-x.XMPToolkit": "Adobe XMP Core 5.6-c015 81.157702, 2015/03/26-00:39:34",
+      "XMP:XMP-xmp.CreatorTool": "Adobe LiveCycle Designer 11.0",
+      "XMP:XMP-xmp.CreateDate": "2017:05:08 16:43:02+03:00",
+      "XMP:XMP-xmpMM.DocumentID": "uuid:16ed7dd6-1bd9-4b08-9d85-72df059179b0"
+    }
+  },
+  "timestamp_rule": {
+    "label": "Modify/Meta",
+    "local_timezone": "Asia/Tbilisi",
+    "sent_from": "PDF.ModifyDate",
+    "compare_keys": [
+      "PDF.ModifyDate",
+      "XMP:XMP-xmp.MetadataDate",
+      "XMP:XMP-xmp.ModifyDate"
+    ],
+    "fail_on_mismatch": true,
+    "enabled": true
+  },
+  "file_size_kb_rule": {
+    "base": 1024,
+    "min_kb": 61.79,
+    "max_kb": 67.32,
+    "avg_kb": 64.68,
+    "inclusive": true,
+    "enforce": true,
+    "sample_count": 15,
+    "variant_note": "GARANTI_MAIN_V1 (15 PDFs)"
+  }
+}

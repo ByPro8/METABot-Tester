@@ -1,0 +1,571 @@
+from __future__ import annotations
+
+"""
+Template checking engine (v1) — ExifTool-only.
+
+PORTING NOTES (for the next ChatGPT / other project):
+- Self-contained module.
+- Input: ExifTool metadata as structured dict: {Group: {Tag: Value}}
+  produced by tools/pdf_meta.py in this repo.
+- Templates: meta_templates/**.json
+  - ignore: groups/tags
+  - exif.required_keys + exif.expected_values + exif.strict_keyset
+  - optional file_size_kb_rule (range check)
+  - optional timestamp_rule (cross-field date consistency + "sent X ago")
+
+Output:
+- structured results (missing/extra/mismatch lists)
+- HTML-rendered logs (colored), safe to embed with Jinja |safe
+  (ALL metadata strings are html-escaped here).
+"""
+
+import json
+import html
+import re
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
+from pathlib import Path
+from typing import Dict, List, Tuple, Any, Optional
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+META_TEMPLATES_DIR = BASE_DIR / "meta_templates"
+
+TEMPLATE_ID_TEB_MAIN_V1 = "TEB_MAIN_V1"
+
+
+# -----------------------------
+# Template loader
+# -----------------------------
+def _load_template_by_id(template_id: str) -> dict:
+    if not META_TEMPLATES_DIR.exists():
+        raise FileNotFoundError("meta_templates/ folder not found")
+
+    for path in META_TEMPLATES_DIR.rglob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if data.get("id") == template_id:
+            data["_path"] = str(path)
+            return data
+
+    raise FileNotFoundError(f"Template id not found: {template_id}")
+
+
+# -----------------------------
+# Exif struct filtering / flattening
+# -----------------------------
+def _filter_exif_struct(
+    exif_struct: Dict[str, Dict[str, str]],
+    ignore_groups: set[str],
+    ignore_tags: set[str],
+) -> Dict[str, Dict[str, str]]:
+    """
+    exif_struct format: {Group: {Tag: Value}}
+    Returns filtered struct with ignored groups removed and ignored tags removed.
+    """
+    out: Dict[str, Dict[str, str]] = {}
+    for group, kv in (exif_struct or {}).items():
+        if group in ignore_groups:
+            continue
+        if not isinstance(kv, dict):
+            continue
+
+        g_out: Dict[str, str] = {}
+        for tag, val in kv.items():
+            if str(tag) in ignore_tags:
+                continue
+            g_out[str(tag)] = "" if val is None else str(val)
+
+        if g_out:
+            out[str(group)] = g_out
+    return out
+
+
+def _flatten(grouped: Dict[str, Dict[str, str]]) -> Dict[str, str]:
+    flat: Dict[str, str] = {}
+    for group, kv in grouped.items():
+        for tag, val in kv.items():
+            flat[f"{group}.{tag}"] = val
+    return flat
+
+
+# -----------------------------
+# HTML helpers (safe rendering)
+# -----------------------------
+def _esc(s: Any) -> str:
+    return html.escape("" if s is None else str(s), quote=False)
+
+
+def _span(text: str, cls: str | None = None) -> str:
+    if cls:
+        return f'<span class="{cls}">{_esc(text)}</span>'
+    return _esc(text)
+
+
+def _line(left: str, right: str | None = None, left_cls: str | None = None, right_cls: str | None = None) -> str:
+    if right is None:
+        return _span(left, left_cls) + "\n"
+    return _span(left, left_cls) + " " + _span(right, right_cls) + "\n"
+
+
+def _human_kb(n_bytes: int) -> str:
+    kb = n_bytes / 1024.0
+    return f"{kb:.2f} kB"
+
+
+def _group_order_keys(grouped: Dict[str, Dict[str, str]]) -> List[str]:
+    return sorted(grouped.keys())
+
+
+def _tags_sorted(kv: Dict[str, str]) -> List[str]:
+    return sorted(kv.keys())
+
+
+# -----------------------------
+# Grouped log builders
+# -----------------------------
+def _build_template_grouped(
+    required_keys: List[str],
+    expected_values: Dict[str, str],
+) -> Dict[str, Dict[str, str]]:
+    """
+    Returns grouped template dict: {Group: {Tag: expected_value_or_placeholder}}
+    """
+    out: Dict[str, Dict[str, str]] = {}
+    for k in required_keys:
+        group, tag = k.split(".", 1)
+        val = expected_values.get(k, "(any)")
+        out.setdefault(group, {})[tag] = val
+    return out
+
+
+def _format_grouped_log_html(
+    grouped: Dict[str, Dict[str, str]],
+    style_for_key: Dict[str, Tuple[str, str]],
+    header_cls: str = "tc-dim",
+) -> str:
+    """
+    grouped: {Group: {Tag: Value}}
+    style_for_key maps "Group.Tag" -> (key_cls, val_cls)
+    """
+    buf: List[str] = []
+    for group in _group_order_keys(grouped):
+        # display-only: make XMP:XMP-xmp look like XMP / XMP-xmp
+        disp_group = group.replace(":", " / ")
+        buf.append(_span(f"--- {disp_group} ---", header_cls) + "\n")
+        kv = grouped[group]
+        for tag in _tags_sorted(kv):
+            full = f"{group}.{tag}"
+            k_cls, v_cls = style_for_key.get(full, ("", ""))
+            buf.append(_span(tag, k_cls) + " : " + _span(kv[tag], v_cls) + "\n")
+        buf.append("\n")
+    return "".join(buf).rstrip() + "\n"
+
+
+# -----------------------------
+# Timestamp helpers (ExifTool PDF-style)
+# -----------------------------
+_DT_RE = re.compile(r"^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})([+-]\d{2}):(\d{2})$")
+
+
+def _parse_exif_dt(val: str | None) -> datetime | None:
+    """
+    Parse ExifTool PDF dates like:
+      2025:12:28 14:55:54+03:00
+    Returns aware datetime with correct offset.
+    """
+    if not val:
+        return None
+    v = str(val).strip()
+    m = _DT_RE.match(v)
+    if not m:
+        return None
+    y, mo, d, hh, mm, ss, oh, om = m.groups()
+    oh_i = int(oh)
+    om_i = int(om)
+    off_min = (oh_i * 60) + (om_i if oh_i >= 0 else -om_i)
+    tz = timezone(timedelta(minutes=off_min))
+    return datetime(int(y), int(mo), int(d), int(hh), int(mm), int(ss), tzinfo=tz)
+
+
+def _fmt_ago(delta: timedelta) -> str:
+    """Human 'sent X ago' / 'sent in X' string (days/hours/mins)."""
+    secs = int(delta.total_seconds())
+    future = secs < 0
+    if future:
+        secs = -secs
+
+    days = secs // 86400
+    secs %= 86400
+    hours = secs // 3600
+    secs %= 3600
+    mins = secs // 60
+    secs %= 60
+
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if mins:
+        parts.append(f"{mins}m")
+    if not parts:
+        parts.append(f"{secs}s")
+
+    core = " ".join(parts)
+    return f"sent in {core}" if future else f"sent {core} ago"
+
+
+def _get_exif_value(exif_struct: Dict[str, Dict[str, str]], full_key: str) -> str | None:
+    """
+    full_key: "Group.Tag" where Group may include ":" (e.g. "XMP:XMP-xmp").
+    """
+    if not full_key or "." not in full_key:
+        return None
+    group, tag = full_key.split(".", 1)
+    g = (exif_struct or {}).get(group)
+    if not isinstance(g, dict):
+        return None
+    v = g.get(tag)
+    if v is None:
+        return None
+    return "" if v is None else str(v)
+
+
+def _timestamp_eval(exif_struct: Dict[str, Dict[str, str]], tpl: dict) -> dict | None:
+    """
+    Template-driven timestamp check.
+    - compare_keys: list of "Group.Tag" that must match exactly (if all parse)
+    - sent_from: which key is used for 'sent X ago' (parse + convert to Asia/Tbilisi by default)
+    - fail_on_mismatch: if True, mismatch => FAIL
+    """
+    rule = tpl.get("timestamp_rule") or {}
+    if rule.get("enabled") is False:
+        return None
+
+    label = str(rule.get("label") or "Create/Modify")
+    tz_name = str(rule.get("local_timezone") or "Asia/Tbilisi")
+    tz_local = ZoneInfo(tz_name)
+
+    compare_keys = list(rule.get("compare_keys") or ["PDF.CreateDate", "PDF.ModifyDate"])
+    sent_from = str(rule.get("sent_from") or (compare_keys[0] if compare_keys else ""))
+    fail_on_mismatch = bool(rule.get("fail_on_mismatch", True))
+
+    raws: list[tuple[str, str | None]] = [(k, _get_exif_value(exif_struct, k)) for k in compare_keys]
+    dts: list[tuple[str, datetime | None]] = [(k, _parse_exif_dt(v)) for (k, v) in raws]
+
+    parsed = [dt for _, dt in dts if dt is not None]
+    match: bool | None
+    if len(parsed) == len(compare_keys) and len(compare_keys) > 0:
+        first = parsed[0]
+        match = all(dt == first for dt in parsed[1:])
+    else:
+        match = None
+
+    # sent_str (yellow)
+    sent_str: str | None = None
+    raw_sent = _get_exif_value(exif_struct, sent_from) if sent_from else None
+    dt_sent = _parse_exif_dt(raw_sent) if raw_sent else None
+    if dt_sent is not None:
+        now_local = datetime.now(tz_local)
+        sent_local = dt_sent.astimezone(tz_local)
+        sent_str = _fmt_ago(now_local - sent_local)
+
+    # detail (counts line)
+    if match is True:
+        # show the sent_from time (or first compare key) + local conversion
+        raw_show = raw_sent if raw_sent else (raws[0][1] if raws else None)
+        dt_show = dt_sent if dt_sent else (dts[0][1] if dts else None)
+        if raw_show and dt_show:
+            detail = f"{raw_show} (local {dt_show.astimezone(tz_local).strftime('%Y-%m-%d %H:%M:%S %z')})"
+        else:
+            detail = raw_show or "(timestamps missing/unparsed)"
+    else:
+        # mismatch or unknown: show all keys and raw values
+        parts: list[str] = []
+        for k, v in raws:
+            parts.append(f"{k}={v if v is not None else '(missing/unparsed)'}")
+        detail = " | ".join(parts) if parts else "(no timestamp keys configured)"
+
+    return {
+        "label": label,
+        "match": match,
+        "detail": detail,
+        "sent_str": sent_str,
+        "fail": (match is False and fail_on_mismatch),
+    }
+
+
+# -----------------------------
+# Main check
+# -----------------------------
+def run_template_check(
+    exif_struct: Dict[str, Dict[str, str]],
+    filename: str,
+    template_id: str = TEMPLATE_ID_TEB_MAIN_V1,
+    file_size_bytes: Optional[int] = None,
+) -> Dict[str, Any]:
+    tpl = _load_template_by_id(template_id)
+
+    bank = tpl.get("bank", "?")
+    ignore_groups = set((tpl.get("ignore") or {}).get("groups") or [])
+    ignore_tags = set((tpl.get("ignore") or {}).get("tags") or [])
+
+    filtered = _filter_exif_struct(exif_struct, ignore_groups, ignore_tags)
+    flat = _flatten(filtered)
+
+    t_exif = tpl.get("exif") or {}
+    strict = bool(t_exif.get("strict_keyset", True))
+
+    required_keys: List[str] = list(t_exif.get("required_keys") or [])
+    required_set = set(required_keys)
+    expected_values: Dict[str, str] = dict(t_exif.get("expected_values") or {})
+
+    extracted_keys = set(flat.keys())
+
+    missing_keys = sorted(list(required_set - extracted_keys))
+    extra_keys = sorted(list(extracted_keys - required_set)) if strict else []
+
+    mismatches: List[Dict[str, str]] = []
+    for k, expected in expected_values.items():
+        got = flat.get(k, "(missing)")
+        if got != expected:
+            mismatches.append({"key": k, "expected": expected, "got": got})
+
+    ok = (len(missing_keys) == 0) and (len(extra_keys) == 0) and (len(mismatches) == 0)
+
+    # Timestamp rule (template-driven)
+    ts = _timestamp_eval(exif_struct, tpl)
+    if ts and ts.get("fail"):
+        ok = False
+
+    # Optional file size rule (KB) — template-driven
+    size_rule = tpl.get("file_size_kb_rule") or None
+    size_ok = True
+    size_msg_html = None
+
+    if size_rule and file_size_bytes is not None:
+        base = float(size_rule.get("base") or 1024)
+        min_kb = float(size_rule.get("min_kb"))
+        max_kb = float(size_rule.get("max_kb"))
+        inclusive = bool(size_rule.get("inclusive", True))
+        enforce = bool(size_rule.get("enforce", True))
+
+        kb = file_size_bytes / base
+        inside = (min_kb <= kb <= max_kb) if inclusive else (min_kb < kb < max_kb)
+        size_ok = bool(inside)
+
+        above_min = kb - min_kb
+        below_max = max_kb - kb
+
+        if inside:
+            cls = "tc-ok"
+            tail = f"fits ✅ | above min: {above_min:.2f} kB | below max: {below_max:.2f} kB"
+        else:
+            cls = "tc-bad"
+            if kb < min_kb:
+                tail = f"OUTSIDE ❌ | below min by: {(min_kb - kb):.2f} kB | below max by: {(max_kb - kb):.2f} kB"
+            else:
+                tail = f"OUTSIDE ❌ | above max by: {(kb - max_kb):.2f} kB | above min by: {(kb - min_kb):.2f} kB"
+
+        size_msg_html = (
+            _span("Size check :", cls)
+            + " "
+            + _span(f"{kb:.2f} kB ({file_size_bytes} bytes)", cls)
+            + " | "
+            + _span(f"range {min_kb:.2f}–{max_kb:.2f} kB", cls)
+            + " | "
+            + _span(tail, cls)
+            + " | "
+            + _span(
+                f"basis: {int(size_rule.get('sample_count', 0) or 0)} PDFs"
+                + (f" • {size_rule.get('variant_note')}" if size_rule.get("variant_note") else ""),
+                "tc-dim",
+            )
+            + "\n"
+        )
+
+        if enforce and (not size_ok):
+            ok = False
+
+    # Counters
+    extracted_count = len(extracted_keys)
+    template_count = len(required_set)
+    meta_ok = (extracted_count == template_count)
+
+    extra_ok = (len(extra_keys) == 0)
+    missing_ok = (len(missing_keys) == 0)
+    mismatch_ok = (len(mismatches) == 0)
+
+    # Report HTML
+    status_cls = "tc-ok" if ok else "tc-bad"
+    report: List[str] = []
+    report.append(_line("==== TEMPLATE CHECK (ExifTool) ===="))
+    report.append(_line("File        :", filename))
+    report.append(_line("Template    :", f"{bank} / {tpl.get('id','?')}"))
+
+    status_tail_parts: list[str] = []
+    if ts:
+        if ts["match"] is True:
+            status_tail_parts.append(_span(f"{ts['label']} match", "tc-ok"))
+        elif ts["match"] is False:
+            status_tail_parts.append(_span(f"{ts['label']} mismatch", "tc-bad"))
+        # if unknown (missing/unparsed) — show nothing in tail (keeps it clean)
+
+        if ts.get("sent_str"):
+            status_tail_parts.append(_span(ts["sent_str"], "tc-warn"))
+
+    tail_html = (" (" + ", ".join(status_tail_parts) + ")") if status_tail_parts else ""
+    report.append(
+        _span("Status      :", status_cls)
+        + " "
+        + _span(("PASS ✅" if ok else "FAIL ❌"), status_cls)
+        + tail_html
+        + "\n"
+    )
+
+    if file_size_bytes is not None:
+        if size_msg_html is not None:
+            report.append(size_msg_html)
+        else:
+            report.append(_line("Size        :", f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"))
+
+    report.append("\n")
+    report.append(_line("---- COUNTS (meaningful keys, after ignores) ----"))
+
+    report.append(
+        _span("Meta count  :", None)
+        + " "
+        + _esc(f"{template_count}/")
+        + _span(str(extracted_count), "tc-ok" if meta_ok else "tc-bad")
+        + "\n"
+    )
+    report.append(
+        _span("Extra keys  :", None)
+        + " "
+        + _esc("0/")
+        + _span(str(len(extra_keys)), "tc-ok" if extra_ok else "tc-bad")
+        + "\n"
+    )
+    report.append(
+        _span("Missing keys:", None)
+        + " "
+        + _esc("0/")
+        + _span(str(len(missing_keys)), "tc-ok" if missing_ok else "tc-bad")
+        + "\n"
+    )
+    report.append(
+        _span("Value mismatches:", None)
+        + " "
+        + _esc("0/")
+        + _span(str(len(mismatches)), "tc-ok" if mismatch_ok else "tc-bad")
+        + "\n"
+    )
+
+    # Timestamp detail line (no 0/0 — color is enough)
+    if ts:
+        ts_cls = "tc-ok" if ts["match"] is True else "tc-bad"
+        report.append(
+            _span(f"{ts['label']}:", None)
+            + " "
+            + _span(ts["detail"], ts_cls)
+            + "\n"
+        )
+
+    report.append("\n")
+
+    # EXTRA KEYS
+    if extra_keys:
+        report.append(_span("EXTRA KEYS:", "tc-bad") + "\n")
+        for k in extra_keys:
+            report.append(_span(f"- {k}", "tc-bad") + "\n")
+    else:
+        report.append(_span("EXTRA KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
+
+    report.append("\n")
+
+    # MISSING KEYS
+    if missing_keys:
+        report.append(_span("MISSING KEYS:", "tc-bad") + "\n")
+        for k in missing_keys:
+            report.append(_span(f"- {k}", "tc-bad") + "\n")
+    else:
+        report.append(_span("MISSING KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
+
+    report.append("\n")
+
+    # VALUE MISMATCHES
+    if mismatches:
+        report.append(_span("VALUE MISMATCHES:", "tc-bad") + "\n")
+        for mm in mismatches:
+            report.append(_span(f"- {mm['key']}: expected={mm['expected']} | got={mm['got']}", "tc-bad") + "\n")
+    else:
+        report.append(_span("VALUE MISMATCHES:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
+
+    report_html = "".join(report).rstrip() + "\n"
+
+    # Template tab HTML
+    template_grouped = _build_template_grouped(required_keys, expected_values)
+    template_style: Dict[str, Tuple[str, str]] = {}
+    for k in required_keys:
+        exp = expected_values.get(k, "(any)")
+        got = flat.get(k)
+        if got is None:
+            template_style[k] = ("tc-bad", "tc-bad")      # missing => both red
+        else:
+            if exp == "(any)" or got == exp:
+                template_style[k] = ("tc-ok", "tc-ok")
+            else:
+                template_style[k] = ("tc-ok", "tc-bad")   # key ok, value bad
+
+    template_html = _format_grouped_log_html(template_grouped, template_style)
+
+    # Extracted tab HTML
+    extracted_style: Dict[str, Tuple[str, str]] = {}
+    extracted_with_expected_note: Dict[str, Dict[str, str]] = {}
+    for group, kv in filtered.items():
+        out_kv: Dict[str, str] = {}
+        for tag, val in kv.items():
+            full = f"{group}.{tag}"
+            if full not in required_set:
+                extracted_style[full] = ("tc-bad", "tc-bad")
+                out_kv[tag] = val
+            else:
+                exp = expected_values.get(full)
+                if exp is None:
+                    extracted_style[full] = ("tc-ok", "tc-ok")
+                    out_kv[tag] = val
+                else:
+                    if val == exp:
+                        extracted_style[full] = ("tc-ok", "tc-ok")
+                        out_kv[tag] = val
+                    else:
+                        extracted_style[full] = ("tc-ok", "tc-bad")
+                        out_kv[tag] = f"{val}  (expected: {exp})"
+        if out_kv:
+            extracted_with_expected_note[group] = out_kv
+
+    extracted_html = _format_grouped_log_html(extracted_with_expected_note, extracted_style)
+
+    return {
+        "filename": filename,
+        "template_id": tpl.get("id"),
+        "template_path": tpl.get("_path"),
+        "status": "PASS" if ok else "FAIL",
+        "counts": {
+            "extracted_keys": extracted_count,
+            "template_keys": template_count,
+            "extra_keys": len(extra_keys),
+            "missing_keys": len(missing_keys),
+            "mismatches": len(mismatches),
+        },
+        "extra_keys": extra_keys,
+        "missing_keys": missing_keys,
+        "mismatches": mismatches,
+        "size_rule": (tpl.get("file_size_kb_rule") if file_size_bytes is not None else None),
+        "size_ok": (size_ok if file_size_bytes is not None else None),
+        "report_html": report_html,
+        "template_html": template_html,
+        "extracted_html": extracted_html,
+    }
