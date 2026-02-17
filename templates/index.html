@@ -59,6 +59,13 @@
               <input class="file" type="file" name="pdf" accept="application/pdf" required / />
             </form>
           </div>
+
+          <div class="uploadItem">
+            <div class="uploadItem__title">List file sizes (KB)</div>
+            <form class="form" action="/sizes" method="post" enctype="multipart/form-data">
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
+            </form>
+          </div>
         </div>
 
         <div class="hint">Selecting files starts automatically. No buttons.</div>
@@ -136,6 +143,20 @@
           <pre class="log show" id="tab-tchk-report">{{ template_check.report_html | safe }}</pre>
           <pre class="log" id="tab-tchk-template">{{ template_check.template_html | safe }}</pre>
           <pre class="log" id="tab-tchk-extracted">{{ template_check.extracted_html | safe }}</pre>
+
+        {% elif sizes %}
+          <div class="kv">
+            <div class="kv__row">
+              <div class="kv__k">Files</div>
+              <div class="kv__v">
+                {% for it in sizes['items'] %}
+                  <div><code>{{ it['name'] }}</code></div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <pre class="log show">{{ sizes.log }}</pre>
 
         {% elif compare %}
           <div class="kv">

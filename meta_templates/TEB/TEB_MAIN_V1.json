@@ -4,8 +4,16 @@
   "engine": "exiftool",
   "notes": "Main TEB family derived from compare/cluster. Exif meaningful keys = 7. Producer=OpenPDF 1.2.0, PDFVersion=1.4, 1 page, not linearized.",
   "ignore": {
-    "groups": ["ExifTool", "File:System"],
-    "tags": ["CreateDate", "ModifyDate", "CreationDate", "MetadataDate"]
+    "groups": [
+      "ExifTool",
+      "File:System"
+    ],
+    "tags": [
+      "CreateDate",
+      "ModifyDate",
+      "CreationDate",
+      "MetadataDate"
+    ]
   },
   "exif": {
     "strict_keyset": true,
@@ -27,5 +35,15 @@
       "PDF.PageCount": "1",
       "PDF.Producer": "OpenPDF 1.2.0"
     }
+  },
+  "file_size_kb_rule": {
+    "base": 1024,
+    "min_kb": 28.58,
+    "max_kb": 29.07,
+    "inclusive": true,
+    "enforce": true,
+    "notes": "Derived from 10 known-good TEB PDFs. Strict range (v1).",
+    "sample_count": 10,
+    "variant_note": "TEB_MAIN_V1 (this family/variant)"
   }
 }

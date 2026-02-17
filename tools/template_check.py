@@ -107,8 +107,7 @@ def _line(left: str, right: str | None = None, left_cls: str | None = None, righ
 
 def _human_kb(n_bytes: int) -> str:
     kb = n_bytes / 1024.0
-    # show one decimal; you can change later
-    return f"{kb:.1f} kB"
+    return f"{kb:.2f} kB"
 
 
 def _group_order_keys(grouped: Dict[str, Dict[str, str]]) -> List[str]:
@@ -214,6 +213,65 @@ def run_template_check(
     ok = (len(missing_keys) == 0) and (len(extra_keys) == 0) and (len(mismatches) == 0)
 
     # -----------------------------
+    # Optional file size rule (KB) — template-driven
+    # Template can define:
+    #   "file_size_kb_rule": { base, min_kb, max_kb, inclusive, enforce }
+    # If enforce=True and size is outside range => overall FAIL.
+    # -----------------------------
+    size_rule = tpl.get("file_size_kb_rule") or None
+    size_ok = True
+    size_msg_html = None
+
+    if size_rule and file_size_bytes is not None:
+        base = float(size_rule.get("base") or 1024)
+        min_kb = float(size_rule.get("min_kb"))
+        max_kb = float(size_rule.get("max_kb"))
+        inclusive = bool(size_rule.get("inclusive", True))
+        enforce = bool(size_rule.get("enforce", True))
+
+        kb = file_size_bytes / base
+
+        inside = (min_kb <= kb <= max_kb) if inclusive else (min_kb < kb < max_kb)
+        size_ok = bool(inside)
+
+        # Distances:
+        # - if inside: show distance ABOVE min and BELOW max (both positive)
+        # - if outside: show how far outside nearest bound
+        above_min = kb - min_kb
+        below_max = max_kb - kb
+
+        if inside:
+            cls = "tc-ok"
+            tail = f"fits ✅ | above min: {above_min:.2f} kB | below max: {below_max:.2f} kB"
+        else:
+            cls = "tc-bad"
+            if kb < min_kb:
+                tail = f"OUTSIDE ❌ | below min by: {(min_kb - kb):.2f} kB | below max by: {(max_kb - kb):.2f} kB"
+            else:
+                tail = f"OUTSIDE ❌ | above max by: {(kb - max_kb):.2f} kB | above min by: {(kb - min_kb):.2f} kB"
+
+        # Build the colored message (entire line green/red)
+        size_msg_html = (
+            _span("Size check :", cls)
+            + " "
+            + _span(f"{kb:.2f} kB ({file_size_bytes} bytes)", cls)
+            + " | "
+            + _span(f"range {min_kb:.2f}–{max_kb:.2f} kB", cls)
+            + " | "
+            + _span(tail, cls)
+            + " | "
+            + _span(
+                f"basis: {int(size_rule.get('sample_count', 0) or 0)} PDFs"
+                + (f" • {size_rule.get('variant_note')}" if size_rule.get('variant_note') else ""),
+                "tc-dim",
+            )
+            + "\n"
+        )
+
+        if enforce and (not size_ok):
+            ok = False
+
+    # -----------------------------
     # Counters in the EXACT format you requested
     # -----------------------------
     extracted_count = len(extracted_keys)
@@ -239,7 +297,10 @@ def run_template_check(
     report.append(_line("Status      :", "PASS ✅" if ok else "FAIL ❌", status_cls, status_cls))
 
     if file_size_bytes is not None:
-        report.append(_line("Size        :", f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"))
+        if size_msg_html is not None:
+            report.append(size_msg_html)
+        else:
+            report.append(_line("Size        :", f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"))
 
     report.append("\n")
     report.append(_line("---- COUNTS (meaningful keys, after ignores) ----"))
@@ -248,8 +309,8 @@ def run_template_check(
     report.append(
         _span("Meta count  :", None)
         + " "
-        + _esc(f"{extracted_count}/")
-        + _span(f"{template_count}", "tc-ok" if meta_den_ok else "tc-bad")
+        + _esc(f"{template_count}/")
+        + _span(f"{extracted_count}", "tc-ok" if meta_den_ok else "tc-bad")
         + "\n"
     )
 
@@ -381,6 +442,8 @@ def run_template_check(
         "extra_keys": extra_keys,
         "missing_keys": missing_keys,
         "mismatches": mismatches,
+        "size_rule": (tpl.get("file_size_kb_rule") if file_size_bytes is not None else None),
+        "size_ok": (size_ok if file_size_bytes is not None else None),
         # HTML logs (render with Jinja |safe)
         "report_html": report_html,
         "template_html": template_html,

@@ -336,6 +336,56 @@ async def template_check(request: Request, pdf: UploadFile = File(...), template
             {"request": request, "result": None, "compare": None, "template_check": None, "error": f"{type(e).__name__}: {e}"},
         )
 
+@app.post("/sizes", response_class=HTMLResponse)
+async def sizes(request: Request, pdfs: List[UploadFile] = File(...)):
+    """
+    Upload many PDFs and print each file size (KB + bytes).
+    Used to help decide a size-range rule for a template family.
+    """
+    try:
+        items = []
+        for up in pdfs:
+            name = safe_name(up.filename or "upload.pdf")
+            out_path = UPLOAD_DIR / name
+            data = await up.read()
+            out_path.write_bytes(data)
+            b = out_path.stat().st_size
+            kb = b / 1024.0
+            items.append({"name": name, "bytes": b, "kb": kb})
+
+        items = sorted(items, key=lambda x: x["name"].lower())
+
+        kbs = [it["kb"] for it in items] or [0.0]
+        summary = {
+            "count": len(items),
+            "min_kb": min(kbs),
+            "max_kb": max(kbs),
+            "avg_kb": sum(kbs) / len(kbs) if items else 0.0,
+        }
+
+        # Plain text log for the UI <pre>
+        lines = ["==== FILE SIZES (KB) ===="]
+        for it in items:
+            lines.append(f"{it['name']} : {it['kb']:.2f} kB ({it['bytes']} bytes)")
+        lines.append("")
+        lines.append(f"Count: {summary['count']}")
+        lines.append(f"Min KB: {summary['min_kb']:.2f}")
+        lines.append(f"Max KB: {summary['max_kb']:.2f}")
+        lines.append(f"Avg KB: {summary['avg_kb']:.2f}")
+        log = "\n".join(lines).rstrip() + "\n"
+
+        payload = {"items": items, "summary": summary, "log": log}
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": None, "compare": None, "template_check": None, "sizes": payload, "error": None},
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "result": None, "compare": None, "template_check": None, "sizes": None, "error": f"{type(e).__name__}: {e}"},
+        )
+
 
 
 @app.get("/cluster")
