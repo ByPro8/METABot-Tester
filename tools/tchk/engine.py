@@ -384,9 +384,17 @@ def run_template_check(
         _span(f"{'Status':<{_KEY_W}}:", status_cls)
         + " "
         + _span(("PASS ✅" if ok else "FAIL ❌"), status_cls)
-        + tail_html
         + "\n"
     )
+
+    # Split timestamp summary into its own line (was previously appended to Status)
+    if status_tail_parts:
+        report.append(
+            _span(f"{'Dates':<{_KEY_W}}:", None)
+            + " "
+            + tail_html.strip()
+            + "\n"
+        )
 
     if file_size_bytes is not None:
         if size_line_html is not None:
