@@ -1,0 +1,48 @@
+{
+  "id": "ING_MAIN_V1",
+  "bank": "ING",
+
+  "ignore": {
+    "groups": ["File:System", "ExifTool"],
+    "tags": ["ExifToolVersion"]
+  },
+
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+
+      "PDF.HasXFA",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.PageLayout",
+      "PDF.PageMode",
+      "PDF.Producer"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+
+      "PDF.HasXFA": "No",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.4",
+      "PDF.PageCount": "1",
+      "PDF.PageLayout": "OneColumn",
+      "PDF.PageMode": "UseNone",
+      "PDF.Producer": "EvoPdf HTML to PDF Converter 4.6"
+    }
+  },
+
+  "file_size_kb_rule": {
+    "base": 1024,
+    "min_kb": 111.16,
+    "max_kb": 112.42,
+    "inclusive": true,
+    "enforce": true,
+    "sample_count": 4
+  }
+}

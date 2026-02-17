@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MetaBot Lab</title>
   <link rel="stylesheet" href="/static/home.css?v=scrollfix-20260217" />
 </head>
+
 <body>
   <div id="processingOverlay" class="overlay" style="display:none;">
     <div class="overlay__box">
@@ -27,28 +29,36 @@
     </header>
 
     <main class="main">
-            <section class="card">
+      <section class="card">
         <div class="card__title">Upload</div>
+
 
         <div class="uploadRow">
           <div class="uploadItem">
             <div class="uploadItem__title">Analyze one PDF</div>
             <form class="form" action="/analyze" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdf" accept="application/pdf" required / />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required />
             </form>
           </div>
 
           <div class="uploadItem">
             <div class="uploadItem__title">Compare multiple PDFs</div>
             <form class="form" action="/compare" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
             </form>
           </div>
 
           <div class="uploadItem">
             <div class="uploadItem__title">Cluster by available keys (A/B/C…)</div>
             <form class="form" action="/cluster" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
+            </form>
+          </div>
+
+          <div class="uploadItem">
+            <div class="uploadItem__title">List file sizes (KB)</div>
+            <form class="form" action="/sizes" method="post" enctype="multipart/form-data">
+              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required />
             </form>
           </div>
 
@@ -56,18 +66,9 @@
             <div class="uploadItem__title">Template check (TEB)</div>
             <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
               <input type="hidden" name="template_id" value="TEB_MAIN_V1" />
-              <input class="file" type="file" name="pdf" accept="application/pdf" required / />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required />
             </form>
           </div>
-
-          <div class="uploadItem">
-            <div class="uploadItem__title">List file sizes (KB)</div>
-            <form class="form" action="/sizes" method="post" enctype="multipart/form-data">
-              <input class="file" type="file" name="pdfs" accept="application/pdf" multiple required / />
-            </form>
-          </div>
-        </div>
-
 
           <div class="uploadItem">
             <div class="uploadItem__title">Template check (Garanti)</div>
@@ -76,7 +77,7 @@
               <input class="file" type="file" name="pdf" accept="application/pdf" required />
             </form>
           </div>
-        
+
           <div class="uploadItem">
             <div class="uploadItem__title">Template check (Enpara)</div>
             <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
@@ -85,10 +86,19 @@
             </form>
           </div>
 
-<div class="hint">Selecting files starts automatically. No buttons.</div>
+          <div class="uploadItem">
+            <div class="uploadItem__title">Template check (ING)</div>
+            <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
+              <input type="hidden" name="template_id" value="ING_MAIN_V1" />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required />
+            </form>
+          </div>
+
+        </div>
+        <div class="hint">Selecting files starts automatically. No buttons.</div>
 
         {% if error %}
-          <div class="error">{{ error }}</div>
+        <div class="error">{{ error }}</div>
         {% endif %}
       </section>
 
@@ -98,213 +108,213 @@
         <div class="card__title">Output</div>
 
         {% if result %}
-          <div class="kv">
-            <div class="kv__row">
-              <div class="kv__k">File</div>
-              <div class="kv__v"><code>{{ result.filename }}</code></div>
-            </div>
-            <div class="kv__row">
-              <div class="kv__k">Family key</div>
-              <div class="kv__v"><code class="wrap">{{ result.family_key }}</code></div>
-            </div>
+        <div class="kv">
+          <div class="kv__row">
+            <div class="kv__k">File</div>
+            <div class="kv__v"><code>{{ result.filename }}</code></div>
           </div>
-
-          <div class="tabs">
-            <button type="button" class="tab active" data-tab="python">PythonMeta</button>
-            <button type="button" class="tab" data-tab="exif">ExifTool</button>
-            <button type="button" class="tab" data-tab="family">Family JSON</button>
+          <div class="kv__row">
+            <div class="kv__k">Family key</div>
+            <div class="kv__v"><code class="wrap">{{ result.family_key }}</code></div>
           </div>
+        </div>
 
-          <pre class="log show" id="tab-python">{{ result.python_log }}</pre>
-          <pre class="log" id="tab-exif">{{ result.exif_log }}</pre>
-          <pre class="log" id="tab-family">{{ result.family | tojson(indent=2) }}</pre>
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="python">PythonMeta</button>
+          <button type="button" class="tab" data-tab="exif">ExifTool</button>
+          <button type="button" class="tab" data-tab="family">Family JSON</button>
+        </div>
+
+        <pre class="log show" id="tab-python">{{ result.python_log }}</pre>
+        <pre class="log" id="tab-exif">{{ result.exif_log }}</pre>
+        <pre class="log" id="tab-family">{{ result.family | tojson(indent=2) }}</pre>
 
         {% elif template_check %}
-          <div class="kv">
-            <div class="kv__row">
-              <div class="kv__k">File</div>
-              <div class="kv__v"><code>{{ template_check.filename }}</code></div>
-            </div>
-            <div class="kv__row">
-              <div class="kv__k">Template</div>
-              <div class="kv__v"><code class="wrap">{{ template_check.template_id }}</code></div>
-            </div>
-            <div class="kv__row">
-              <div class="kv__k">Status</div>
-              <div class="kv__v">
-                {% if template_check.status == "PASS" %}
-                  <span class="badge same">PASS</span>
-                {% else %}
-                  <span class="badge diff">FAIL</span>
-                {% endif %}
-              </div>
-            </div>
-            <div class="kv__row">
-              <div class="kv__k">Counts</div>
-              <div class="kv__v">
-                Extracted keys: <code>{{ template_check.counts.extracted_keys }}</code> |
-                Template keys: <code>{{ template_check.counts.template_keys }}</code> |
-                Extra: <code>{{ template_check.counts.extra_keys }}</code> |
-                Missing: <code>{{ template_check.counts.missing_keys }}</code> |
-                Mismatches: <code>{{ template_check.counts.mismatches }}</code>
-              </div>
+        <div class="kv">
+          <div class="kv__row">
+            <div class="kv__k">File</div>
+            <div class="kv__v"><code>{{ template_check.filename }}</code></div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Template</div>
+            <div class="kv__v"><code class="wrap">{{ template_check.template_id }}</code></div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Status</div>
+            <div class="kv__v">
+              {% if template_check.status == "PASS" %}
+              <span class="badge same">PASS</span>
+              {% else %}
+              <span class="badge diff">FAIL</span>
+              {% endif %}
             </div>
           </div>
-
-          <div class="tabs">
-            <button type="button" class="tab active" data-tab="tchk-report">Template Check</button>
-            <button type="button" class="tab" data-tab="tchk-template">Template (expected)</button>
-            <button type="button" class="tab" data-tab="tchk-extracted">Extracted Exif (filtered)</button>
+          <div class="kv__row">
+            <div class="kv__k">Counts</div>
+            <div class="kv__v">
+              Extracted keys: <code>{{ template_check.counts.extracted_keys }}</code> |
+              Template keys: <code>{{ template_check.counts.template_keys }}</code> |
+              Extra: <code>{{ template_check.counts.extra_keys }}</code> |
+              Missing: <code>{{ template_check.counts.missing_keys }}</code> |
+              Mismatches: <code>{{ template_check.counts.mismatches }}</code>
+            </div>
           </div>
+        </div>
 
-          <pre class="log show" id="tab-tchk-report">{{ template_check.report_html | safe }}</pre>
-          <pre class="log" id="tab-tchk-template">{{ template_check.template_html | safe }}</pre>
-          <pre class="log" id="tab-tchk-extracted">{{ template_check.extracted_html | safe }}</pre>
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="tchk-report">Template Check</button>
+          <button type="button" class="tab" data-tab="tchk-template">Template (expected)</button>
+          <button type="button" class="tab" data-tab="tchk-extracted">Extracted Exif (filtered)</button>
+        </div>
+
+        <pre class="log show" id="tab-tchk-report">{{ template_check.report_html | safe }}</pre>
+        <pre class="log" id="tab-tchk-template">{{ template_check.template_html | safe }}</pre>
+        <pre class="log" id="tab-tchk-extracted">{{ template_check.extracted_html | safe }}</pre>
 
         {% elif sizes %}
-          <div class="kv">
-            <div class="kv__row">
-              <div class="kv__k">Files</div>
-              <div class="kv__v">
-                {% for it in sizes['items'] %}
-                  <div><code>{{ it['name'] }}</code></div>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-
-          <pre class="log show">{{ sizes.log }}</pre>
-
-        {% elif compare %}
-          <div class="kv">
-            <div class="kv__row">
-              <div class="kv__k">Files</div>
-              <div class="kv__v">
-                {% for f in compare.files %}
-                  <div><code>{{ f }}</code></div>
-                {% endfor %}
-              </div>
-            </div>
-            <div class="kv__row">
-              <div class="kv__k">Family</div>
-              <div class="kv__v">
-                {% if compare.family_all_same %}
-                  <span class="badge same">ALL SAME</span>
-                {% else %}
-                  <span class="badge diff">DIFFER</span>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="tabs">
-            <button type="button" class="tab active" data-tab="cmp-python">Compare: PythonMeta</button>
-            <button type="button" class="tab" data-tab="cmp-exif">Compare: ExifTool</button>
-            <button type="button" class="tab" data-tab="cmp-family">Family Details</button>
-          </div>
-
-          <div class="pane show" id="tab-cmp-python">
-            <div class="split">
-              <div class="block same">
-                <div class="block__title">✅ Same (PythonMeta)</div>
-                {% if compare.python.same|length == 0 %}
-                  <div class="muted">No shared identical keys (after ignores).</div>
-                {% else %}
-                  {% for sec in compare.python.same_grouped %}
-                    <div class="sectionHead">--- {{ sec.section }} ---</div>
-                    <ul class="kvlist">
-                      {% for k,v in sec.rows %}
-                        <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
-                      {% endfor %}
-                    </ul>
-                  {% endfor %}
-                {% endif %}
-              </div>
-
-              <div class="block diff">
-                <div class="block__title">❌ Different / Missing (PythonMeta)</div>
-                {% if compare.python.diff|length == 0 %}
-                  <div class="muted">No differences.</div>
-                {% else %}
-                  {% for sec in compare.python.diff_grouped %}
-                    <div class="sectionHead">--- {{ sec.section }} ---</div>
-                    {% for row in sec.rows %}
-                      <div class="diffrow">
-                        <div><code class="k">{{ row.tag }}</code></div>
-                        <div class="diffvals">
-                          {% for f in compare.files %}
-                            <div class="diffval">
-                              <div class="diffval__f">{{ f }}</div>
-                              <code class="diffval__v">{{ row.vals[f] }}</code>
-                            </div>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    {% endfor %}
-                  {% endfor %}
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="pane" id="tab-cmp-exif">
-            <div class="split">
-              <div class="block same">
-                <div class="block__title">✅ Same (ExifTool)</div>
-                {% if compare.exif.same|length == 0 %}
-                  <div class="muted">No shared identical keys (after ignores).</div>
-                {% else %}
-                  {% for sec in compare.exif.same_grouped %}
-                    <div class="sectionHead">--- {{ sec.section }} ---</div>
-                    <ul class="kvlist">
-                      {% for k,v in sec.rows %}
-                        <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
-                      {% endfor %}
-                    </ul>
-                  {% endfor %}
-                {% endif %}
-              </div>
-
-              <div class="block diff">
-                <div class="block__title">❌ Different / Missing (ExifTool)</div>
-                {% if compare.exif.diff|length == 0 %}
-                  <div class="muted">No differences.</div>
-                {% else %}
-                  {% for sec in compare.exif.diff_grouped %}
-                    <div class="sectionHead">--- {{ sec.section }} ---</div>
-                    {% for row in sec.rows %}
-                      <div class="diffrow">
-                        <div><code class="k">{{ row.tag }}</code></div>
-                        <div class="diffvals">
-                          {% for f in compare.files %}
-                            <div class="diffval">
-                              <div class="diffval__f">{{ f }}</div>
-                              <code class="diffval__v">{{ row.vals[f] }}</code>
-                            </div>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    {% endfor %}
-                  {% endfor %}
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="pane" id="tab-cmp-family">
-            <div class="block {% if compare.family_all_same %}same{% else %}diff{% endif %}">
-              <div class="block__title">Family keys</div>
-              {% for f in compare.files %}
-                <div class="familyrow">
-                  <div class="familyrow__f"><code>{{ f }}</code></div>
-                  <div class="familyrow__k"><code class="wrap">{{ compare.family_keys[f] }}</code></div>
-                </div>
+        <div class="kv">
+          <div class="kv__row">
+            <div class="kv__k">Files</div>
+            <div class="kv__v">
+              {% for it in sizes['items'] %}
+              <div><code>{{ it['name'] }}</code></div>
               {% endfor %}
             </div>
           </div>
+        </div>
+
+        <pre class="log show">{{ sizes.log }}</pre>
+
+        {% elif compare %}
+        <div class="kv">
+          <div class="kv__row">
+            <div class="kv__k">Files</div>
+            <div class="kv__v">
+              {% for f in compare.files %}
+              <div><code>{{ f }}</code></div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Family</div>
+            <div class="kv__v">
+              {% if compare.family_all_same %}
+              <span class="badge same">ALL SAME</span>
+              {% else %}
+              <span class="badge diff">DIFFER</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="cmp-python">Compare: PythonMeta</button>
+          <button type="button" class="tab" data-tab="cmp-exif">Compare: ExifTool</button>
+          <button type="button" class="tab" data-tab="cmp-family">Family Details</button>
+        </div>
+
+        <div class="pane show" id="tab-cmp-python">
+          <div class="split">
+            <div class="block same">
+              <div class="block__title">✅ Same (PythonMeta)</div>
+              {% if compare.python.same|length == 0 %}
+              <div class="muted">No shared identical keys (after ignores).</div>
+              {% else %}
+              {% for sec in compare.python.same_grouped %}
+              <div class="sectionHead">--- {{ sec.section }} ---</div>
+              <ul class="kvlist">
+                {% for k,v in sec.rows %}
+                <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
+                {% endfor %}
+              </ul>
+              {% endfor %}
+              {% endif %}
+            </div>
+
+            <div class="block diff">
+              <div class="block__title">❌ Different / Missing (PythonMeta)</div>
+              {% if compare.python.diff|length == 0 %}
+              <div class="muted">No differences.</div>
+              {% else %}
+              {% for sec in compare.python.diff_grouped %}
+              <div class="sectionHead">--- {{ sec.section }} ---</div>
+              {% for row in sec.rows %}
+              <div class="diffrow">
+                <div><code class="k">{{ row.tag }}</code></div>
+                <div class="diffvals">
+                  {% for f in compare.files %}
+                  <div class="diffval">
+                    <div class="diffval__f">{{ f }}</div>
+                    <code class="diffval__v">{{ row.vals[f] }}</code>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+              {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="pane" id="tab-cmp-exif">
+          <div class="split">
+            <div class="block same">
+              <div class="block__title">✅ Same (ExifTool)</div>
+              {% if compare.exif.same|length == 0 %}
+              <div class="muted">No shared identical keys (after ignores).</div>
+              {% else %}
+              {% for sec in compare.exif.same_grouped %}
+              <div class="sectionHead">--- {{ sec.section }} ---</div>
+              <ul class="kvlist">
+                {% for k,v in sec.rows %}
+                <li><code class="k">{{ k }}</code><code class="v">{{ v }}</code></li>
+                {% endfor %}
+              </ul>
+              {% endfor %}
+              {% endif %}
+            </div>
+
+            <div class="block diff">
+              <div class="block__title">❌ Different / Missing (ExifTool)</div>
+              {% if compare.exif.diff|length == 0 %}
+              <div class="muted">No differences.</div>
+              {% else %}
+              {% for sec in compare.exif.diff_grouped %}
+              <div class="sectionHead">--- {{ sec.section }} ---</div>
+              {% for row in sec.rows %}
+              <div class="diffrow">
+                <div><code class="k">{{ row.tag }}</code></div>
+                <div class="diffvals">
+                  {% for f in compare.files %}
+                  <div class="diffval">
+                    <div class="diffval__f">{{ f }}</div>
+                    <code class="diffval__v">{{ row.vals[f] }}</code>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+              {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="pane" id="tab-cmp-family">
+          <div class="block {% if compare.family_all_same %}same{% else %}diff{% endif %}">
+            <div class="block__title">Family keys</div>
+            {% for f in compare.files %}
+            <div class="familyrow">
+              <div class="familyrow__f"><code>{{ f }}</code></div>
+              <div class="familyrow__k"><code class="wrap">{{ compare.family_keys[f] }}</code></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
 
         {% else %}
-          <div class="muted">Upload one PDF to view logs, or upload multiple to compare.</div>
+        <div class="muted">Upload one PDF to view logs, or upload multiple to compare.</div>
         {% endif %}
       </section>
     </main>
@@ -319,12 +329,12 @@
     }
 
     // Show on any form submit (backup)
-    document.addEventListener("submit", function(e) {
+    document.addEventListener("submit", function (e) {
       showProcessingOverlay();
     }, true);
 
     // Show immediately when picking files (primary)
-    document.addEventListener("change", function(e) {
+    document.addEventListener("change", function (e) {
       var t = e.target;
       if (t && t.matches && t.matches('input[type="file"]')) {
         if (t.files && t.files.length > 0) showProcessingOverlay();
@@ -334,4 +344,5 @@
 
 
 </body>
+
 </html>

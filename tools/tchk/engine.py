@@ -336,6 +336,7 @@ def run_template_check(
         sample_count = int(size_rule.get("sample_count", 0) or 0)
 
         kb = file_size_bytes / base
+        kb = round(kb + 1e-9, 2)  # compare/display using 2dp (avoid float edge cases)
         inside = (min_kb <= kb <= max_kb) if inclusive else (min_kb < kb < max_kb)
         size_ok = bool(inside)
 
