@@ -1,0 +1,58 @@
+{
+  "id": "ENPARA_MAIN_V1",
+  "bank": "ENPARA",
+  "ignore": {
+    "groups": [
+      "ExifTool",
+      "File:System"
+    ],
+    "tags": [
+      "ExifToolVersion",
+      "CreateDate",
+      "ModifyDate"
+    ]
+  },
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+      "PDF.Author",
+      "PDF.Creator",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.Producer"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+      "PDF.Author": "Ibtech",
+      "PDF.Creator": "Ibtech",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.4",
+      "PDF.PageCount": "1",
+      "PDF.Producer": "iText 2.1.7 by 1T3XT"
+    }
+  },
+  "timestamp_rule": {
+    "label": "Create/Modify",
+    "compare_keys": [
+      "PDF.CreateDate",
+      "PDF.ModifyDate"
+    ],
+    "sent_from": "PDF.CreateDate",
+    "fail_on_mismatch": true,
+    "local_timezone": "Asia/Tbilisi"
+  },
+  "file_size_kb_rule": {
+    "base": 1024,
+    "min_kb": 116.17,
+    "max_kb": 117.25,
+    "inclusive": true,
+    "enforce": true,
+    "sample_count": 15
+  }
+}

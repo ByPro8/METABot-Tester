@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from tools.pdf_meta import extract_metadata_logs, extract_metadata_structured
 from tools.cluster_meta_types import build_family_key, short_key
-from tools.template_check import run_template_check, TEMPLATE_ID_TEB_MAIN_V1
+from tools.tchk import run_template_check
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "output" / "uploads"
@@ -303,7 +303,7 @@ async def analyze(request: Request, pdf: UploadFile = File(...)):
 
 
 @app.post("/template-check", response_class=HTMLResponse)
-async def template_check(request: Request, pdf: UploadFile = File(...), template_id: str = Form(TEMPLATE_ID_TEB_MAIN_V1)):
+async def template_check(request: Request, pdf: UploadFile = File(...), template_id: str = Form("TEB_MAIN_V1")):
     """
     Single-PDF check against a stored ExifTool metadata template (v1).
     Current v1 template: TEB_MAIN_V1

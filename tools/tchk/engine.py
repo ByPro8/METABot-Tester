@@ -26,7 +26,6 @@ from typing import Dict, List, Tuple, Any, Optional
 BASE_DIR = Path(__file__).resolve().parents[2]
 META_TEMPLATES_DIR = BASE_DIR / "meta_templates"
 
-TEMPLATE_ID_TEB_MAIN_V1 = "TEB_MAIN_V1"
 DEFAULT_TEMPLATE_ID = "TEB_MAIN_V1"
 
 # Align all report lines so values after ":" start in the same column.

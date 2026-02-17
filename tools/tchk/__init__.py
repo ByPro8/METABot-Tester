@@ -1,7 +1,14 @@
-"""Template-check package.
-Public API: run_template_check(...)
-Bank IDs: TEMPLATE_ID_* constants in tools.tchk.banks
+"""
+Template-check package.
+Public API:
+    run_template_check(exif_struct, filename, template_id, file_size_bytes=None)
+
+Template IDs are simple strings:
+    "TEB_MAIN_V1"
+    "GARANTI_MAIN_V1"
+    "ENPARA_MAIN_V1"
 """
 
 from .engine import run_template_check
-from .banks import TEMPLATE_ID_TEB_MAIN_V1, TEMPLATE_ID_GARANTI_MAIN_V1
+
+__all__ = ["run_template_check"]
