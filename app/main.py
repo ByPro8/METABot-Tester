@@ -79,7 +79,7 @@ _IGNORE_KEY_EXACT_BASE: set[str] = {
 
 
 # Pattern ignores: remove timestamps that are usually unstable across downloads
-_IGNORE_KEY_PATTERNS: list[tuple[str, "Pattern[str]"]] = []
+_IGNORE_KEY_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = []
 
 
 def _build_ignore_patterns():
