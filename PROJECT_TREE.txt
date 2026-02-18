@@ -1,0 +1,63 @@
+.
+./tools
+./tools/tchk
+./tools/tchk/__init__.py
+./tools/tchk/__pycache__
+./tools/tchk/__pycache__/__init__.cpython-314.pyc
+./tools/tchk/__pycache__/engine.cpython-314.pyc
+./tools/tchk/engine.py
+./tools/__init__.py
+./tools/pdf_meta.py
+./tools/__pycache__
+./tools/__pycache__/template_check.cpython-314.pyc
+./tools/__pycache__/pdf_meta.cpython-314.pyc
+./tools/__pycache__/make_template.cpython-314.pyc
+./tools/__pycache__/cluster_meta_types.cpython-314.pyc
+./tools/__pycache__/__init__.cpython-314.pyc
+./tools/make_template.py
+./tools/cluster_meta_types.py
+./PROJECT_TREE.txt
+./app
+./app/__pycache__
+./app/__pycache__/main.cpython-314.pyc
+./app/main.py
+./bin
+./bin/exiftool
+./bin/exiftool/run_exiftool.sh
+./bin/exiftool/exiftool
+./bin/exiftool/lib
+./bin/exiftool/lib/File
+./bin/exiftool/lib/Image
+./meta_templates
+./meta_templates/TEB
+./meta_templates/TEB/TEB_MAIN_V1.json
+./meta_templates/README.md
+./meta_templates/ing
+./meta_templates/ing/ING_MAIN_V1.json
+./meta_templates/enpara
+./meta_templates/enpara/ENPARA_MAIN_V1.json
+./meta_templates/turkiefinans
+./meta_templates/garanti
+./meta_templates/garanti/GARANTI_MAIN_V1.json
+./samples
+./samples/teb
+./samples/teb/Teb 39.pdf
+./samples/teb/Teb 38.pdf
+./samples/teb/Teb 28.pdf
+./samples/teb/Teb 03.pdf
+./samples/teb/Teb 27.pdf
+./samples/teb/Teb 135.pdf
+./samples/teb/Teb 24.pdf
+./samples/teb/34.pdf
+./samples/teb/Teb 37.pdf
+./samples/teb/Teb 40.pdf
+./static
+./static/home.css
+./static/cluster.css
+./static/app.css
+./static/app.js
+./templates
+./templates/index.html
+./templates/cluster.html
+./templates/view.html
+./metabot_full.zip
