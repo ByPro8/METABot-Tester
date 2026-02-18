@@ -165,12 +165,16 @@
           <button type="button" class="tab active" data-tab="tchk-report">Template Check</button>
           <button type="button" class="tab" data-tab="tchk-template">Template (expected)</button>
           <button type="button" class="tab" data-tab="tchk-extracted">Extracted Exif (filtered)</button>
+          <button type="button" class="tab" data-tab="tchk-raw-template">Raw Exif (template)</button>
+          <button type="button" class="tab" data-tab="tchk-raw-uploaded">Raw Exif (uploaded)</button>
         </div>
 
         <pre class="log show" id="tab-tchk-report">{{ template_check.report_html | safe }}</pre>
         <pre class="log" id="tab-tchk-template">{{ template_check.template_html | safe }}</pre>
         <pre class="log" id="tab-tchk-extracted">{{ template_check.extracted_html | safe }}</pre>
 
+        <pre class="log" id="tab-tchk-raw-template">{{ template_check.raw_template_exif }}</pre>
+        <pre class="log" id="tab-tchk-raw-uploaded">{{ template_check.raw_uploaded_exif }}</pre>
         {% elif sizes %}
         <div class="kv">
           <div class="kv__row">

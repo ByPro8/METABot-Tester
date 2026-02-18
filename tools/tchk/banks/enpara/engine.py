@@ -301,11 +301,15 @@ def run_template_check(
     filename: str,
     template_id: str,
     file_size_bytes: Optional[int] = None,
+    exif_text: Optional[str] = None,
 ) -> Dict[str, Any]:
     if template_id not in ALLOWED_TEMPLATE_IDS:
         raise ValueError(f"Template id not supported by enpara engine: {template_id}")
     tpl = _load_template_by_id(template_id)
 
+
+    raw_template_exif = str(tpl.get("raw_template_exif") or "").rstrip()
+    raw_uploaded_exif = (exif_text or "").rstrip()
     bank = tpl.get("bank", "?")
     ignore_groups = set((tpl.get("ignore") or {}).get("groups") or [])
     ignore_tags = set((tpl.get("ignore") or {}).get("tags") or [])
@@ -545,4 +549,6 @@ def run_template_check(
         "report_html": report_html,
         "template_html": template_html,
         "extracted_html": extracted_html,
+        "raw_template_exif": raw_template_exif,
+        "raw_uploaded_exif": raw_uploaded_exif,
     }

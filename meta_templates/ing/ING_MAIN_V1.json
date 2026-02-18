@@ -1,19 +1,21 @@
 {
   "id": "ING_MAIN_V1",
   "bank": "ING",
-
   "ignore": {
-    "groups": ["File:System", "ExifTool"],
-    "tags": ["ExifToolVersion"]
+    "groups": [
+      "File:System",
+      "ExifTool"
+    ],
+    "tags": [
+      "ExifToolVersion"
+    ]
   },
-
   "exif": {
     "strict_keyset": true,
     "required_keys": [
       "File.FileType",
       "File.FileTypeExtension",
       "File.MIMEType",
-
       "PDF.HasXFA",
       "PDF.Linearized",
       "PDF.PDFVersion",
@@ -26,7 +28,6 @@
       "File.FileType": "PDF",
       "File.FileTypeExtension": "pdf",
       "File.MIMEType": "application/pdf",
-
       "PDF.HasXFA": "No",
       "PDF.Linearized": "No",
       "PDF.PDFVersion": "1.4",
@@ -36,7 +37,6 @@
       "PDF.Producer": "EvoPdf HTML to PDF Converter 4.6"
     }
   },
-
   "file_size_kb_rule": {
     "base": 1024,
     "min_kb": 111.16,
@@ -44,5 +44,6 @@
     "inclusive": true,
     "enforce": true,
     "sample_count": 4
-  }
+  },
+  "raw_template_exif": "---- ExifTool ----\nExifTool Version              : 13.36\n\n---- File:System ----\nDirectory                   : (any)\nFileAccessDate              : (any)\nFileInodeChangeDate         : (any)\nFileModifyDate              : (any)\nFileName                    : (any)\nFilePermissions             : -rw-r--r--\nFileSize                    : (any)\n\n---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nHasXFA                      : No\nLinearized                  : No\nPDFVersion                  : 1.4\nPageCount                   : 1\nPageLayout                  : OneColumn\nPageMode                    : UseNone\nProducer                    : EvoPdf HTML to PDF Converter 4.6\n"
 }

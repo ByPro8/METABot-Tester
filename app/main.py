@@ -79,7 +79,7 @@ _IGNORE_KEY_EXACT_BASE: set[str] = {
 
 
 # Pattern ignores: remove timestamps that are usually unstable across downloads
-_IGNORE_KEY_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = []
+_IGNORE_KEY_PATTERNS: list[tuple[str, "Pattern[str]"]] = []
 
 
 def _build_ignore_patterns():
@@ -88,11 +88,25 @@ def _build_ignore_patterns():
     pats: list[tuple[str, "re.Pattern[str]"]] = []
 
     # ExifTool often emits these date-ish tags in various groups
-    pats.append(("exif dates", re.compile(r"^exif\..*\.(CreateDate|ModifyDate|CreationDate|MetadataDate)$")))
+    pats.append(
+        (
+            "exif dates",
+            re.compile(
+                r"^exif\..*\.(CreateDate|ModifyDate|CreationDate|MetadataDate)$"
+            ),
+        )
+    )
 
     # pypdf Info keys (your PythonMeta "PDF Info (Document Metadata)")
     # banks differ here, but date fields are noisy and not useful for template building.
-    pats.append(("python info dates", re.compile(r"^py\..*\.(CreationDate|ModDate|CreateDate|ModifyDate|MetadataDate)$")))
+    pats.append(
+        (
+            "python info dates",
+            re.compile(
+                r"^py\..*\.(CreationDate|ModDate|CreateDate|ModifyDate|MetadataDate)$"
+            ),
+        )
+    )
 
     return pats
 
@@ -134,13 +148,17 @@ def _group_same_for_ui(items: List[Tuple[str, str]]) -> List[Dict[str, object]]:
     return out
 
 
-def _group_diff_for_ui(items: List[Tuple[str, Dict[str, str]]], files: List[str]) -> List[Dict[str, object]]:
+def _group_diff_for_ui(
+    items: List[Tuple[str, Dict[str, str]]], files: List[str]
+) -> List[Dict[str, object]]:
     """Convert [(flat_key,{file:value})] into grouped sections for UI."""
     grouped: Dict[str, List[Dict[str, object]]] = {}
     for k, vals in items:
         _src, section, tag = _split_flat_key(k)
         section_disp = (section or "(none)").replace(":", " / ")
-        grouped.setdefault(section_disp, []).append({"tag": tag or "(none)", "vals": vals})
+        grouped.setdefault(section_disp, []).append(
+            {"tag": tag or "(none)", "vals": vals}
+        )
 
     out: List[Dict[str, object]] = []
     for sec in sorted(grouped.keys()):
@@ -170,7 +188,6 @@ def _group_keys_for_ui(keys: List[str]) -> List[Dict[str, object]]:
     return out
 
 
-
 def _group_by_keyset(
     flat_per_file: Dict[str, Dict[str, str]], ignore_exact: set[str]
 ) -> List[Dict[str, object]]:
@@ -195,13 +212,16 @@ def _group_by_keyset(
     out: List[Dict[str, object]] = []
     for i, (keyset, files) in enumerate(groups):
         label = labels[i] if i < len(labels) else f"G{i+1}"
-        out.append({
-            "label": label,
-            "count": len(files),
-            "files": sorted(files),
-            "keys": sorted(list(keyset)),
-        })
+        out.append(
+            {
+                "label": label,
+                "count": len(files),
+                "files": sorted(files),
+                "keys": sorted(list(keyset)),
+            }
+        )
     return out
+
 
 def _compare_many(
     flat_per_file: Dict[str, Dict[str, str]], ignore_exact: set[str]
@@ -238,11 +258,11 @@ def _compare_many(
     return same_list, diff_list
 
 
-
 def _cluster_cache_cleanup() -> None:
     now = time.time()
     dead = [
-        k for k, v in CLUSTER_CACHE.items()
+        k
+        for k, v in CLUSTER_CACHE.items()
         if (now - float(v.get("ts", now))) > CLUSTER_TTL_SECONDS
     ]
     for k in dead:
@@ -297,13 +317,21 @@ async def analyze(request: Request, pdf: UploadFile = File(...)):
     except Exception as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "error": f"{type(e).__name__}: {e}"},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "error": f"{type(e).__name__}: {e}",
+            },
         )
 
 
-
 @app.post("/template-check", response_class=HTMLResponse)
-async def template_check(request: Request, pdf: UploadFile = File(...), template_id: str = Form("TEB_MAIN_V1")):
+async def template_check(
+    request: Request,
+    pdf: UploadFile = File(...),
+    template_id: str = Form("TEB_MAIN_V1"),
+):
     """
     Single-PDF check against a stored ExifTool metadata template (v1).
     Current v1 template: TEB_MAIN_V1
@@ -323,18 +351,32 @@ async def template_check(request: Request, pdf: UploadFile = File(...), template
             filename=name,
             template_id=template_id,
             file_size_bytes=out_path.stat().st_size,
+            exif_text=meta.get("exif_text", ""),
         )
 
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "template_check": report, "error": None},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "template_check": report,
+                "error": None,
+            },
         )
 
     except Exception as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "template_check": None, "error": f"{type(e).__name__}: {e}"},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "template_check": None,
+                "error": f"{type(e).__name__}: {e}",
+            },
         )
+
 
 @app.post("/sizes", response_class=HTMLResponse)
 async def sizes(request: Request, pdfs: List[UploadFile] = File(...)):
@@ -377,15 +419,28 @@ async def sizes(request: Request, pdfs: List[UploadFile] = File(...)):
         payload = {"items": items, "summary": summary, "log": log}
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "template_check": None, "sizes": payload, "error": None},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "template_check": None,
+                "sizes": payload,
+                "error": None,
+            },
         )
 
     except Exception as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "template_check": None, "sizes": None, "error": f"{type(e).__name__}: {e}"},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "template_check": None,
+                "sizes": None,
+                "error": f"{type(e).__name__}: {e}",
+            },
         )
-
 
 
 @app.get("/cluster")
@@ -413,8 +468,12 @@ async def cluster(request: Request, pdfs: List[UploadFile] = File(...)):
             meta = extract_metadata_structured(pth, display_name=pth.name)
             per_file[pth.name] = meta
 
-        python_flat = {fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file}
-        exif_flat = {fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file}
+        python_flat = {
+            fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file
+        }
+        exif_flat = {
+            fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file
+        }
 
         ignore_exact = _IGNORE_KEY_EXACT_BASE
 
@@ -441,7 +500,6 @@ async def cluster(request: Request, pdfs: List[UploadFile] = File(...)):
         return RedirectResponse(url=f"/cluster/result/{cid}", status_code=303)
 
 
-
 @app.get("/cluster/result/{cid}", response_class=HTMLResponse)
 def cluster_result(request: Request, cid: str):
     data = _cluster_cache_get(cid)
@@ -449,7 +507,11 @@ def cluster_result(request: Request, cid: str):
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
         "cluster.html",
-        {"request": request, "cluster": data.get("cluster"), "error": data.get("error")},
+        {
+            "request": request,
+            "cluster": data.get("cluster"),
+            "error": data.get("error"),
+        },
     )
 
 
@@ -475,8 +537,12 @@ async def compare(request: Request, pdfs: List[UploadFile] = File(...)):
             families[p.name] = fam
             family_keys[p.name] = short_key(fam)
 
-        python_flat = {fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file}
-        exif_flat = {fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file}
+        python_flat = {
+            fn: _flatten_struct(per_file[fn]["python_struct"], "py") for fn in per_file
+        }
+        exif_flat = {
+            fn: _flatten_struct(per_file[fn]["exif_struct"], "exif") for fn in per_file
+        }
 
         ignore_exact = _IGNORE_KEY_EXACT_BASE
 
@@ -484,7 +550,7 @@ async def compare(request: Request, pdfs: List[UploadFile] = File(...)):
         ex_same, ex_diff = _compare_many(exif_flat, ignore_exact=ignore_exact)
 
         uniq_family = set(family_keys.values())
-        family_all_same = (len(uniq_family) == 1)
+        family_all_same = len(uniq_family) == 1
 
         files = list(per_file.keys())
 
@@ -509,16 +575,24 @@ async def compare(request: Request, pdfs: List[UploadFile] = File(...)):
 
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": compare_result, "error": None},
+            {
+                "request": request,
+                "result": None,
+                "compare": compare_result,
+                "error": None,
+            },
         )
 
     except Exception as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": None, "compare": None, "error": f"{type(e).__name__}: {e}"},
+            {
+                "request": request,
+                "result": None,
+                "compare": None,
+                "error": f"{type(e).__name__}: {e}",
+            },
         )
-
-
 
 
 @app.get("/raw/{filename}")
