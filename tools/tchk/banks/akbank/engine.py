@@ -36,10 +36,10 @@ def _find_base_dir() -> Path:
     return p.parents[4]
 
 BASE_DIR = _find_base_dir()
-META_TEMPLATES_DIR = BASE_DIR / "meta_templates" / "ing"
-DEFAULT_TEMPLATE_ID = "ING_MAIN_V1"
+META_TEMPLATES_DIR = BASE_DIR / "meta_templates" / "akbank"
+DEFAULT_TEMPLATE_ID = "AKBANK_MAIN_V1"
 
-ALLOWED_TEMPLATE_IDS = ['ING_MAIN_V1']
+ALLOWED_TEMPLATE_IDS = ["AKBANK_MAIN_V1"]
 
 # Align all report lines so values after ":" start in the same column.
 _KEY_W = 16  # longest label we print is "Value mismatches"
@@ -342,7 +342,7 @@ def run_template_check(
     exif_text: Optional[str] = None,
 ) -> Dict[str, Any]:
     if template_id not in ALLOWED_TEMPLATE_IDS:
-        raise ValueError(f"Template id not supported by ing engine: {template_id}")
+        raise ValueError(f"Template id not supported by akbank engine: {template_id}")
     tpl = _load_template_by_id(template_id)
 
 
@@ -492,12 +492,7 @@ def run_template_check(
     )
 
     if ts:
-        if ts["match"] is True:
-            ts_cls = "tc-ok"
-        elif ts["match"] is False:
-            ts_cls = "tc-bad"
-        else:
-            ts_cls = "tc-warn"
+        ts_cls = "tc-ok" if ts["match"] is True else "tc-bad"
         report.append(_kv(ts["label"], _span(ts["detail"], ts_cls)))
 
     report.append("\n")

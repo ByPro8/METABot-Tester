@@ -101,6 +101,44 @@ def _flatten(grouped: Dict[str, Dict[str, str]]) -> Dict[str, str]:
 # -----------------------------
 # HTML helpers (safe rendering)
 # -----------------------------
+def _strip_exiftool_headers(raw: str) -> str:
+    """Remove noisy ExifTool header/version sections from raw exif text (UI only).
+
+    Strips blocks like:
+      ---- ExifTool ----
+      ExifTool Version : 13.36
+
+      ---- ExifTool ----
+      ExifToolVersion  : 13.36
+    """
+    if not raw:
+        return ""
+    lines = raw.splitlines(True)
+    out = []
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() == "---- ExifTool ----":
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            if j < len(lines):
+                nxt = lines[j].lstrip()
+                if nxt.startswith("ExifTool Version") or nxt.startswith("ExifToolVersion"):
+                    # skip header + its version line(s) until the next blank-line break
+                    k = j + 1
+                    while k < len(lines) and lines[k].strip() != "":
+                        k += 1
+                    while k < len(lines) and lines[k].strip() == "":
+                        k += 1
+                    i = k
+                    continue
+        out.append(lines[i])
+        i += 1
+
+    text = "".join(out)
+    return text.lstrip("\n")
+
+
 def _esc(s: Any) -> str:
     return html.escape("" if s is None else str(s), quote=False)
 
@@ -308,8 +346,8 @@ def run_template_check(
     tpl = _load_template_by_id(template_id)
 
 
-    raw_template_exif = str(tpl.get("raw_template_exif") or "").rstrip()
-    raw_uploaded_exif = (exif_text or "").rstrip()
+    raw_template_exif = _strip_exiftool_headers(str(tpl.get("raw_template_exif") or "")).rstrip()
+    raw_uploaded_exif = _strip_exiftool_headers(exif_text or "").rstrip()
     bank = tpl.get("bank", "?")
     ignore_groups = set((tpl.get("ignore") or {}).get("groups") or [])
     ignore_tags = set((tpl.get("ignore") or {}).get("tags") or [])

@@ -1,0 +1,60 @@
+{
+  "id": "AKBANK_MAIN_V1",
+  "bank": "AKBANK",
+  "engine": "exiftool",
+  "notes": "AKBANK Group A family (11 samples). Meaningful Exif keys=7. Producer=OpenPDF 1.2.3.java7. CreateDate==ModifyDate used as sent time.",
+  "ignore": {
+    "groups": [
+      "ExifTool",
+      "File:System"
+    ],
+    "tags": [
+      "CreateDate",
+      "ModifyDate",
+      "CreationDate",
+      "MetadataDate"
+    ]
+  },
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.Producer"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.4",
+      "PDF.PageCount": "1",
+      "PDF.Producer": "OpenPDF 1.2.3.java7"
+    }
+  },
+  "file_size_kb_rule": {
+    "base": 1024,
+    "min_kb": 26.98,
+    "max_kb": 27.27,
+    "inclusive": true,
+    "enforce": true,
+    "sample_count": 11,
+    "variant_note": "AKBANK_MAIN_V1"
+  },
+  "timestamp_rule": {
+    "enabled": true,
+    "label": "Create/Modify",
+    "compare_keys": [
+      "PDF.CreateDate",
+      "PDF.ModifyDate"
+    ],
+    "sent_from": "PDF.CreateDate",
+    "fail_on_mismatch": true,
+    "local_timezone": "Asia/Tbilisi"
+  },
+  "raw_template_exif": "---- File:System ----\nDirectory                   : (any)\nFileAccessDate              : (any)\nFileInodeChangeDate         : (any)\nFileModifyDate              : (any)\nFileName                    : (any)\nFilePermissions             : (any)\nFileSize                    : (any)\n\n---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreateDate                  : (any)\nLinearized                  : No\nModifyDate                  : (any)\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : OpenPDF 1.2.3.java7\n"
+}
