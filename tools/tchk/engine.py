@@ -44,4 +44,8 @@ def run_template_check(
         from .banks.denizbank.engine import run_template_check as _run
         return _run(exif_struct, filename, template_id, file_size_bytes, exif_text)
 
+    if tid.startswith("VAKIFBANK_"):
+        from .banks.vakifbank.engine import run_template_check as _run
+        return _run(exif_struct, filename, template_id, file_size_bytes, exif_text)
+
     raise ValueError(f"Unknown template_id (no bank engine route): {template_id}")

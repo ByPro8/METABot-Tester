@@ -110,6 +110,14 @@
             </form>
           </div>
 
+          <div class="uploadItem">
+            <div class="uploadItem__title">Template check (Vakifbank)</div>
+            <form class="form" action="/template-check" method="post" enctype="multipart/form-data">
+              <input type="hidden" name="template_id" value="VAKIFBANK_MAIN_V1" />
+              <input class="file" type="file" name="pdf" accept="application/pdf" required />
+            </form>
+          </div>
+
         </div>
         <div class="hint">Selecting files starts automatically. No buttons.</div>
 
