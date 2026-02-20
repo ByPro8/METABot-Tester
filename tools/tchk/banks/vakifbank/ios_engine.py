@@ -461,6 +461,23 @@ def run_template_check(
             _kv("Size", _esc(f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"))
         )
 
+    # KB stats (observed sample info)
+    kb_stats = template.get("file_size_kb_stats")
+    if kb_stats:
+        try:
+            report.append(
+                _kv(
+                    "KB stats",
+                    _esc(
+                        f"Count: {kb_stats.get('count')} | "
+                        f"Min KB: {float(kb_stats.get('min')):.2f} | "
+                        f"Max KB: {float(kb_stats.get('max')):.2f} | "
+                        f"Avg KB: {float(kb_stats.get('avg')):.2f}"
+                    ),
+                )
+            )
+        except Exception:
+            report.append(_kv("KB stats", _esc(str(kb_stats))))
     report.append("\n")
     report.append(_esc("---- COUNTS (meaningful keys, after ignores) ----\n"))
 
