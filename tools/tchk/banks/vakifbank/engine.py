@@ -10,6 +10,12 @@ Supports 2 variants:
 - iOS: PDF.Creator missing/empty AND PDF.Producer startswith "iOS Version"
 
 UI can call template_id = VAKIFBANK_AUTO_V1 and we will auto-pick the right variant.
+
+IMPORTANT UI ORDERING:
+We preserve the natural order of groups/tags as they appear in:
+- template required_keys (Template tab), and
+- ExifTool struct (Extracted tab)
+(no alphabetical sorting).
 """
 
 import json
@@ -24,7 +30,6 @@ from typing import Dict, List, Tuple, Any, Optional
 BANK_NAME = "Vakifbank"
 ENGINE_NAME = "vakifbank"
 
-# UI sends AUTO; engine converts it to a concrete template id.
 DEFAULT_TEMPLATE_ID = "VAKIFBANK_AUTO_V1"
 ALLOWED_TEMPLATE_IDS = {
     "VAKIFBANK_AUTO_V1",
@@ -32,20 +37,18 @@ ALLOWED_TEMPLATE_IDS = {
     "VAKIFBANK_IOS_V1",
 }
 
-# Align report lines so values after ":" start in the same column.
-_KEY_W = 16  # longest label we print is "Value mismatches"
+_KEY_W = 16  # alignment for report labels
 
 
 # -----------------------------
 # Paths / template loader
 # -----------------------------
 def _find_base_dir() -> Path:
-    """Find repo root (the folder that contains meta_templates/)."""
+    """Find repo root (folder that contains meta_templates/)."""
     here = Path(__file__).resolve()
-    for p in [here] + list(here.parents)[:8]:
+    for p in [here] + list(here.parents)[:10]:
         if (p / "meta_templates").exists():
             return p
-    # Fallback: 2 levels up from tools/tchk/banks/vakifbank/engine.py -> project root in most layouts.
     return Path(__file__).resolve().parents[4]
 
 
@@ -54,9 +57,10 @@ META_TEMPLATES_DIR = BASE_DIR / "meta_templates" / "vakifbank"
 
 
 def _load_template_by_id(template_id: str) -> dict:
-    """Load a JSON template by its "id" field."""
+    """Load a JSON template by its 'id' field."""
     if template_id == "VAKIFBANK_AUTO_V1":
         raise FileNotFoundError("AUTO template id is not a file template")
+
     if not META_TEMPLATES_DIR.exists():
         raise FileNotFoundError("meta_templates/vakifbank/ folder not found")
 
@@ -80,6 +84,7 @@ def _filter_exif_struct(
     ignore_groups: set[str],
     ignore_tags: set[str],
 ) -> Dict[str, Dict[str, str]]:
+    """Filter out ignored groups/tags while preserving group/tag order."""
     out: Dict[str, Dict[str, str]] = {}
     for group, kv in (exif_struct or {}).items():
         if group in ignore_groups:
@@ -110,15 +115,7 @@ def _flatten(grouped: Dict[str, Dict[str, str]]) -> Dict[str, str]:
 # Raw Exif UI helper
 # -----------------------------
 def _strip_exiftool_headers(raw: str) -> str:
-    """Remove noisy ExifTool header/version sections from raw exif text (UI only).
-
-    Strips blocks like:
-      ---- ExifTool ----
-      ExifTool Version              : 13.36
-
-      ---- ExifTool ----
-      ExifToolVersion             : 13.36
-    """
+    """Remove noisy ExifTool header/version sections from raw exif text (UI only)."""
     if not raw:
         return ""
 
@@ -132,10 +129,7 @@ def _strip_exiftool_headers(raw: str) -> str:
                 j += 1
             if j < len(lines):
                 nxt = lines[j].lstrip()
-                if nxt.startswith("ExifTool Version") or nxt.startswith(
-                    "ExifToolVersion"
-                ):
-                    # Skip header + its version line(s) until the next blank-line break.
+                if nxt.startswith("ExifTool Version") or nxt.startswith("ExifToolVersion"):
                     k = j + 1
                     while k < len(lines) and lines[k].strip() != "":
                         k += 1
@@ -153,12 +147,7 @@ def _strip_exiftool_headers(raw: str) -> str:
 # Variant selection (AUTO)
 # -----------------------------
 def _pick_vakifbank_template_id(exif_struct: dict) -> str:
-    """Auto-pick Vakifbank template variant.
-
-    Rules:
-    - Chromium variant: PDF.Creator == "Chromium"
-    - iOS variant: (Creator missing/empty) AND PDF.Producer startswith "iOS Version"
-    """
+    """Auto-pick Vakifbank template variant."""
     pdf = (exif_struct or {}).get("PDF") or {}
     creator = str(pdf.get("Creator") or "").strip()
     producer = str(pdf.get("Producer") or "").strip()
@@ -169,12 +158,12 @@ def _pick_vakifbank_template_id(exif_struct: dict) -> str:
     if (not creator) and producer.startswith("iOS Version"):
         return "VAKIFBANK_IOS_V1"
 
-    # Safe fallback: Chromium is the most common/strictly-defined variant.
+    # safe fallback
     return "VAKIFBANK_CHROMIUM_V1"
 
 
 # -----------------------------
-# HTML helpers (safe rendering)
+# HTML helpers
 # -----------------------------
 def _esc(s: Any) -> str:
     return html.escape("" if s is None else str(s), quote=False)
@@ -187,7 +176,6 @@ def _span(text: str, cls: str | None = None) -> str:
 
 
 def _kv(label: str, value_html: str, label_cls: str | None = None) -> str:
-    """label is plain text (no colon). value_html is already escaped/spanned HTML."""
     return _span(f"{label:<{_KEY_W}}:", label_cls) + " " + value_html + "\n"
 
 
@@ -196,28 +184,20 @@ def _human_kb(n_bytes: int) -> str:
     return f"{kb:.2f} kB"
 
 
-def _group_order_keys(grouped: Dict[str, Dict[str, str]]) -> List[str]:
-    return sorted(grouped.keys())
-
-
-def _tags_sorted(kv: Dict[str, str]) -> List[str]:
-    return sorted(kv.keys())
-
-
 # -----------------------------
-# Grouped log builders
+# Grouped log builders (ORDER PRESERVING)
 # -----------------------------
 def _build_template_grouped(
     required_keys: List[str],
     expected_values: Dict[str, str],
     ios_variant: bool,
 ) -> Dict[str, Dict[str, str]]:
+    """Build grouped template view in the exact order of required_keys."""
     out: Dict[str, Dict[str, str]] = {}
     for k in required_keys:
         group, tag = k.split(".", 1)
         val = expected_values.get(k, "(any)")
         if ios_variant and k == "PDF.Producer":
-            # Display hint for the special prefix rule.
             val = "iOS Version* (Quartz PDFContext)"
         out.setdefault(group, {})[tag] = val
     return out
@@ -228,7 +208,7 @@ def _format_grouped_log_html(
     style_for_key: Dict[str, Tuple[str, str]],
     header_cls: str = "tc-dim",
 ) -> str:
-    """Render grouped {Group:{Tag:Value}} to an aligned HTML log."""
+    """Render grouped {Group:{Tag:Value}} preserving insertion order (no sorting)."""
     tag_w = 0
     for _g, _kv in (grouped or {}).items():
         if isinstance(_kv, dict):
@@ -236,29 +216,26 @@ def _format_grouped_log_html(
                 tag_w = max(tag_w, len(str(_t)))
 
     buf: List[str] = []
-    for group in _group_order_keys(grouped):
+    for group, kv in (grouped or {}).items():
         disp_group = group.replace(":", " / ")
         buf.append(_span(f"--- {disp_group} ---", header_cls) + "\n")
-        kv = grouped[group]
-        for tag in _tags_sorted(kv):
+
+        for tag, val in (kv or {}).items():
             full = f"{group}.{tag}"
             k_cls, v_cls = style_for_key.get(full, ("", ""))
             disp_tag = f"{tag:<{tag_w}}" if tag_w else str(tag)
-            buf.append(_span(disp_tag, k_cls) + " : " + _span(kv[tag], v_cls) + "\n")
+            buf.append(_span(disp_tag, k_cls) + " : " + _span(val, v_cls) + "\n")
+
         buf.append("\n")
+
     return "".join(buf).rstrip() + "\n"
 
 
 # -----------------------------
 # Timestamp helpers
 # -----------------------------
-# ExifTool examples:
-# - 2026:01:29 15:15:11+00:00
-# - 2026:01:09 08:05:53Z
-_DT_OFF_RE = re.compile(
-    r"^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})([+-]\d{2}):(\d{2})$"
-)
-_DT_Z_RE = re.compile(r"^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})Z$")  # UTC
+_DT_OFF_RE = re.compile(r"^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})([+-]\d{2}):(\d{2})$")
+_DT_Z_RE = re.compile(r"^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})Z$")
 
 
 def _parse_exif_dt(val: str | None) -> datetime | None:
@@ -269,9 +246,7 @@ def _parse_exif_dt(val: str | None) -> datetime | None:
     mz = _DT_Z_RE.match(v)
     if mz:
         y, mo, d, hh, mm, ss = mz.groups()
-        return datetime(
-            int(y), int(mo), int(d), int(hh), int(mm), int(ss), tzinfo=timezone.utc
-        )
+        return datetime(int(y), int(mo), int(d), int(hh), int(mm), int(ss), tzinfo=timezone.utc)
 
     m = _DT_OFF_RE.match(v)
     if not m:
@@ -311,9 +286,7 @@ def _fmt_ago(delta: timedelta) -> str:
     return f"sent in {core}" if future else f"sent {core} ago"
 
 
-def _get_exif_value(
-    exif_struct: Dict[str, Dict[str, str]], full_key: str
-) -> str | None:
+def _get_exif_value(exif_struct: Dict[str, Dict[str, str]], full_key: str) -> str | None:
     if not full_key or "." not in full_key:
         return None
     group, tag = full_key.split(".", 1)
@@ -323,7 +296,7 @@ def _get_exif_value(
     v = g.get(tag)
     if v is None:
         return None
-    return "" if v is None else str(v)
+    return str(v)
 
 
 def _timestamp_eval(exif_struct: Dict[str, Dict[str, str]], tpl: dict) -> dict | None:
@@ -335,22 +308,17 @@ def _timestamp_eval(exif_struct: Dict[str, Dict[str, str]], tpl: dict) -> dict |
     tz_name = str(rule.get("local_timezone") or "Asia/Tbilisi")
     tz_local = ZoneInfo(tz_name)
 
-    compare_keys = list(
-        rule.get("compare_keys") or ["PDF.CreateDate", "PDF.ModifyDate"]
-    )
+    compare_keys = list(rule.get("compare_keys") or ["PDF.CreateDate", "PDF.ModifyDate"])
     sent_from = str(rule.get("sent_from") or (compare_keys[0] if compare_keys else ""))
     fail_on_mismatch = bool(rule.get("fail_on_mismatch", True))
 
-    raws: list[tuple[str, str | None]] = [
-        (k, _get_exif_value(exif_struct, k)) for k in compare_keys
-    ]
+    raws: list[tuple[str, str | None]] = [(k, _get_exif_value(exif_struct, k)) for k in compare_keys]
     dts: list[tuple[str, datetime | None]] = [(k, _parse_exif_dt(v)) for (k, v) in raws]
 
     parsed = [dt for _, dt in dts if dt is not None]
-    match: bool | None
     if len(parsed) == len(compare_keys) and len(compare_keys) > 0:
         first = parsed[0]
-        match = all(dt == first for dt in parsed[1:])
+        match: bool | None = all(dt == first for dt in parsed[1:])
     else:
         match = None
 
@@ -394,7 +362,6 @@ def run_template_check(
     file_size_bytes: Optional[int] = None,
     exif_text: str | None = None,
 ) -> Dict[str, Any]:
-    # Normalize + auto-pick variants when UI requests AUTO.
     tid = str(template_id or "").strip()
     if tid in ("", "VAKIFBANK_AUTO_V1", "VAKIFBANK_MAIN_V1"):
         tid = _pick_vakifbank_template_id(exif_struct)
@@ -403,15 +370,11 @@ def run_template_check(
         raise ValueError(f"Unknown template_id for {BANK_NAME}: {tid}")
 
     tpl = _load_template_by_id(tid)
-    ios_variant = tid == "VAKIFBANK_IOS_V1"
+    ios_variant = (tid == "VAKIFBANK_IOS_V1")
 
-    # Raw exif blocks for UI tabs (do NOT re-extract; caller passes exif_text).
-    raw_template_exif = _strip_exiftool_headers(
-        str(tpl.get("raw_template_exif") or "").rstrip()
-    )
+    raw_template_exif = _strip_exiftool_headers(str(tpl.get("raw_template_exif") or "").rstrip())
     raw_uploaded_exif = _strip_exiftool_headers(str(exif_text or "").rstrip())
 
-    bank = tpl.get("bank", "?")
     ignore_groups = set((tpl.get("ignore") or {}).get("groups") or [])
     ignore_tags = set((tpl.get("ignore") or {}).get("tags") or [])
 
@@ -431,17 +394,13 @@ def run_template_check(
 
     mismatches: List[Dict[str, str]] = []
 
-    # Normal exact-match checks from template JSON.
     for k, expected in expected_values.items():
-        # Vakifbank iOS Producer is handled by a special prefix rule below.
         if ios_variant and k == "PDF.Producer":
             continue
-
         got = flat.get(k, "(missing)")
         if got != expected:
             mismatches.append({"key": k, "expected": expected, "got": got})
 
-    # Vakifbank iOS variant rule: Producer must start with 'iOS Version'
     if ios_variant:
         prod = flat.get("PDF.Producer", "")
         if not (prod or "").startswith("iOS Version"):
@@ -455,7 +414,6 @@ def run_template_check(
 
     ok = (len(missing_keys) == 0) and (len(extra_keys) == 0) and (len(mismatches) == 0)
 
-    # Timestamp rule (template-driven)
     ts = _timestamp_eval(exif_struct, tpl)
     if ts and ts.get("fail"):
         ok = False
@@ -490,91 +448,17 @@ def run_template_check(
         if enforce and (not size_ok):
             ok = False
 
-    # Counters
     extracted_count = len(extracted_keys)
     template_count = len(required_set)
-    meta_ok = extracted_count == template_count
-
-    extra_ok = len(extra_keys) == 0
-    missing_ok = len(missing_keys) == 0
-    mismatch_ok = len(mismatches) == 0
-
-    # Report HTML (aligned)
-    status_cls = "tc-ok" if ok else "tc-bad"
 
     report: List[str] = []
     report.append(_esc("==== TEMPLATE CHECK (ExifTool) ====\n"))
-
     report.append(_kv("File", _esc(filename)))
-    report.append(_kv("Template", _esc(f"{bank} / {tpl.get('id','?')}")))
-
-    status_tail_parts: list[str] = []
-    if ts:
-        if ts["match"] is True:
-            status_tail_parts.append(_span(f"{ts['label']} match", "tc-ok"))
-        elif ts["match"] is False:
-            status_tail_parts.append(_span(f"{ts['label']} mismatch", "tc-bad"))
-        else:
-            status_tail_parts.append(_span(f"{ts['label']} unknown", "tc-warn"))
-
-        if ts.get("sent_str"):
-            status_tail_parts.append(_span(ts["sent_str"], "tc-warn"))
-
+    report.append(_kv("Template", _esc(f"{tpl.get('bank','?')} / {tpl.get('id','?')}")))
     report.append(
-        _span(f"{'Status':<{_KEY_W}}:", status_cls)
+        _span(f"{'Status':<{_KEY_W}}:", "tc-ok" if ok else "tc-bad")
         + " "
-        + _span(("PASS ✅" if ok else "FAIL ❌"), status_cls)
-        + "\n"
-    )
-
-    if status_tail_parts:
-        report.append(
-            _span(f"{'Dates':<{_KEY_W}}:", None)
-            + " ("
-            + ", ".join(status_tail_parts)
-            + ")\n"
-        )
-
-    if file_size_bytes is not None:
-        if size_line_html is not None:
-            report.append(size_line_html)
-        else:
-            report.append(
-                _kv(
-                    "Size",
-                    _esc(f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"),
-                )
-            )
-
-    report.append("\n")
-    report.append(_esc("---- COUNTS (meaningful keys, after ignores) ----\n"))
-
-    report.append(
-        _span(f"{'Meta count':<{_KEY_W}}:", None)
-        + " "
-        + _esc(f"{template_count}/")
-        + _span(str(extracted_count), "tc-ok" if meta_ok else "tc-bad")
-        + "\n"
-    )
-    report.append(
-        _span(f"{'Extra keys':<{_KEY_W}}:", None)
-        + " "
-        + _esc("0/")
-        + _span(str(len(extra_keys)), "tc-ok" if extra_ok else "tc-bad")
-        + "\n"
-    )
-    report.append(
-        _span(f"{'Missing keys':<{_KEY_W}}:", None)
-        + " "
-        + _esc("0/")
-        + _span(str(len(missing_keys)), "tc-ok" if missing_ok else "tc-bad")
-        + "\n"
-    )
-    report.append(
-        _span(f"{'Value mismatches':<{_KEY_W}}:", None)
-        + " "
-        + _esc("0/")
-        + _span(str(len(mismatches)), "tc-ok" if mismatch_ok else "tc-bad")
+        + _span(("PASS ✅" if ok else "FAIL ❌"), "tc-ok" if ok else "tc-bad")
         + "\n"
     )
 
@@ -586,7 +470,22 @@ def run_template_check(
         else:
             ts_cls = "tc-warn"
         report.append(_kv(ts["label"], _span(ts["detail"], ts_cls)))
+        if ts.get("sent_str"):
+            report.append(_kv("Sent", _span(ts["sent_str"], "tc-warn")))
 
+    if file_size_bytes is not None:
+        if size_line_html:
+            report.append(size_line_html)
+        else:
+            report.append(_kv("Size", _esc(f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)")))
+
+    report.append("\n")
+    report.append(_esc("---- COUNTS (meaningful keys, after ignores) ----\n"))
+    report.append(_kv("Extracted keys", _esc(str(extracted_count))))
+    report.append(_kv("Template keys", _esc(str(template_count))))
+    report.append(_kv("Extra keys", _esc(str(len(extra_keys)))))
+    report.append(_kv("Missing keys", _esc(str(len(missing_keys)))))
+    report.append(_kv("Mismatches", _esc(str(len(mismatches)))))
     report.append("\n")
 
     if extra_keys:
@@ -594,10 +493,7 @@ def run_template_check(
         for k in extra_keys:
             report.append(_span(f"- {k}", "tc-bad") + "\n")
     else:
-        report.append(
-            _span("EXTRA KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n"
-        )
-
+        report.append(_span("EXTRA KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
     report.append("\n")
 
     if missing_keys:
@@ -605,57 +501,35 @@ def run_template_check(
         for k in missing_keys:
             report.append(_span(f"- {k}", "tc-bad") + "\n")
     else:
-        report.append(
-            _span("MISSING KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n"
-        )
-
+        report.append(_span("MISSING KEYS:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
     report.append("\n")
 
     if mismatches:
         report.append(_span("VALUE MISMATCHES:", "tc-bad") + "\n")
         for mm in mismatches:
-            report.append(
-                _span(
-                    f"- {mm['key']}: expected={mm['expected']} | got={mm['got']}",
-                    "tc-bad",
-                )
-                + "\n"
-            )
+            report.append(_span(f"- {mm['key']}: expected={mm['expected']} | got={mm['got']}", "tc-bad") + "\n")
     else:
-        report.append(
-            _span("VALUE MISMATCHES:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n"
-        )
+        report.append(_span("VALUE MISMATCHES:", "tc-ok") + " " + _span("(none)", "tc-ok") + "\n")
 
     report_html = "".join(report).rstrip() + "\n"
 
-    # Template tab HTML
-    template_grouped = _build_template_grouped(
-        required_keys, expected_values, ios_variant
-    )
+    # Template tab
+    template_grouped = _build_template_grouped(required_keys, expected_values, ios_variant)
     template_style: Dict[str, Tuple[str, str]] = {}
-
     for k in required_keys:
         got = flat.get(k)
         if got is None:
             template_style[k] = ("tc-bad", "tc-bad")
             continue
-
         if ios_variant and k == "PDF.Producer":
-            template_style[k] = (
-                "tc-ok",
-                "tc-ok" if got.startswith("iOS Version") else "tc-bad",
-            )
+            template_style[k] = ("tc-ok", "tc-ok" if got.startswith("iOS Version") else "tc-bad")
             continue
-
         exp = expected_values.get(k, "(any)")
-        if exp == "(any)" or got == exp:
-            template_style[k] = ("tc-ok", "tc-ok")
-        else:
-            template_style[k] = ("tc-ok", "tc-bad")
+        template_style[k] = ("tc-ok", "tc-ok" if (exp == "(any)" or got == exp) else "tc-bad")
 
     template_html = _format_grouped_log_html(template_grouped, template_style)
 
-    # Extracted tab HTML
+    # Extracted tab (preserve ExifTool order)
     extracted_style: Dict[str, Tuple[str, str]] = {}
     extracted_with_expected_note: Dict[str, Dict[str, str]] = {}
 
@@ -664,21 +538,15 @@ def run_template_check(
         for tag, val in kv.items():
             full = f"{group}.{tag}"
 
-            # Extra keys (not in required set)
             if full not in required_set:
                 extracted_style[full] = ("tc-bad", "tc-bad")
                 out_kv[tag] = val
                 continue
 
-            # Special iOS Producer rule
             if ios_variant and full == "PDF.Producer":
                 okp = val.startswith("iOS Version")
                 extracted_style[full] = ("tc-ok", "tc-ok" if okp else "tc-bad")
-                out_kv[tag] = (
-                    val
-                    if okp
-                    else f"{val}  (expected: iOS Version* (Quartz PDFContext))"
-                )
+                out_kv[tag] = val if okp else f"{val}  (expected: iOS Version* (Quartz PDFContext))"
                 continue
 
             exp = expected_values.get(full)
@@ -696,13 +564,11 @@ def run_template_check(
         if out_kv:
             extracted_with_expected_note[group] = out_kv
 
-    extracted_html = _format_grouped_log_html(
-        extracted_with_expected_note, extracted_style
-    )
+    extracted_html = _format_grouped_log_html(extracted_with_expected_note, extracted_style)
 
     return {
         "filename": filename,
-        "template_id": tpl.get("id"),  # concrete id (Chromium/iOS)
+        "template_id": tpl.get("id"),
         "template_path": tpl.get("_path"),
         "status": "PASS" if ok else "FAIL",
         "counts": {
@@ -715,9 +581,7 @@ def run_template_check(
         "extra_keys": extra_keys,
         "missing_keys": missing_keys,
         "mismatches": mismatches,
-        "size_rule": (
-            tpl.get("file_size_kb_rule") if file_size_bytes is not None else None
-        ),
+        "size_rule": (tpl.get("file_size_kb_rule") if file_size_bytes is not None else None),
         "size_ok": (size_ok if file_size_bytes is not None else None),
         "report_html": report_html,
         "template_html": template_html,
