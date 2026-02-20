@@ -1,5 +1,5 @@
 {
-  "id": "VAKIFBANK_MAIN_V1",
+  "id": "VAKIFBANK_CHROMIUM_V1",
   "bank": "VAKIFBANK",
   "engine": "exiftool",
   "notes": "VAKIFBANK Group A family (8 samples). Meaningful Exif keys=8. Creator=Chromium. Producer=Skia/PDF m144. CreateDate==ModifyDate used as sent time (UTC +00:00).",
@@ -45,8 +45,8 @@
     "inclusive": true,
     "enforce": true,
     "sample_count": 8,
-    "variant_note": "VAKIFBANK_MAIN_V1",
-    "notes": "Derived from 8 known-good VAKIFBANK PDFs. Strict range (v1)."
+    "variant_note": "VAKIFBANK_CHROMIUM_V1",
+    "notes": "Chromium/Skia variant (8 samples)."
   },
   "timestamp_rule": {
     "enabled": true,
@@ -59,5 +59,5 @@
     "fail_on_mismatch": true,
     "local_timezone": "Asia/Tbilisi"
   },
-  "raw_template_exif": "---- File:System ----\nDirectory                   : (any)\nFileAccessDate              : (any)\nFileInodeChangeDate         : (any)\nFileModifyDate              : (any)\nFileName                    : (any)\nFilePermissions             : (any)\nFileSize                    : (any)\n\n---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreateDate                  : (any)\nCreator                     : Chromium\nLinearized                  : No\nModifyDate                  : (any)\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : Skia/PDF m144\n"
+  "raw_template_exif": "---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreateDate                  : (any)\nCreator                     : Chromium\nLinearized                  : No\nModifyDate                  : (any)\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : Skia/PDF m144\n"
 }
