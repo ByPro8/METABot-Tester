@@ -1,0 +1,61 @@
+{
+  "id": "TURKIYEFINANS_CHROMIUM_V1",
+  "bank": "Türkiye Finans",
+  "ignore": {
+    "groups": [
+      "ExifTool",
+      "File:System"
+    ],
+    "tags": [
+      "CreateDate",
+      "ModifyDate",
+      "CreationDate",
+      "MetadataDate"
+    ]
+  },
+  "exif": {
+    "strict_keyset": true,
+    "required_keys": [
+      "File.FileType",
+      "File.FileTypeExtension",
+      "File.MIMEType",
+      "PDF.Creator",
+      "PDF.Linearized",
+      "PDF.PDFVersion",
+      "PDF.PageCount",
+      "PDF.Producer"
+    ],
+    "expected_values": {
+      "File.FileType": "PDF",
+      "File.FileTypeExtension": "pdf",
+      "File.MIMEType": "application/pdf",
+      "PDF.Creator": "Chromium",
+      "PDF.Linearized": "No",
+      "PDF.PDFVersion": "1.4",
+      "PDF.PageCount": "1",
+      "PDF.Producer": "Skia/PDF m144"
+    }
+  },
+  "timestamp_rule": {
+    "enabled": true,
+    "label": "Create/Modify",
+    "local_timezone": "Asia/Tbilisi",
+    "compare_keys": [
+      "PDF.CreateDate",
+      "PDF.ModifyDate"
+    ],
+    "sent_from": "PDF.CreateDate",
+    "fail_on_mismatch": true
+  },
+  "file_size_kb_rule": {
+    "enabled": true,
+    "base": 1024,
+    "inclusive": true,
+    "enforce": true,
+    "min_kb": 167.55,
+    "max_kb": 168.01,
+    "sample_count": 3,
+    "note": "Engine compares rounded KB (2dp) to avoid boundary false-fails."
+  },
+  "raw_template_exif": "---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreator                     : Chromium\nLinearized                  : No\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : Skia/PDF m144\n"
+}
