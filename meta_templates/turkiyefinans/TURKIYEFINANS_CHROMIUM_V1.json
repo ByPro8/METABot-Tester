@@ -57,5 +57,5 @@
     "sample_count": 3,
     "note": "Engine compares rounded KB (2dp) to avoid boundary false-fails."
   },
-  "raw_template_exif": "---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreator                     : Chromium\nLinearized                  : No\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : Skia/PDF m144\n"
+  "raw_template_exif": "---- File:System ----\nDirectory                   : (any)\nFileAccessDate              : (any)\nFileInodeChangeDate         : (any)\nFileModifyDate              : (any)\nFileName                    : (any)\nFilePermissions             : -rw-r--r--\nFileSize                    : (any)\n\n---- File ----\nFileType                    : PDF\nFileTypeExtension           : pdf\nMIMEType                    : application/pdf\n\n---- PDF ----\nCreateDate                  : (any)\nCreator                     : Chromium\nLinearized                  : No\nModifyDate                  : (any)\nPDFVersion                  : 1.4\nPageCount                   : 1\nProducer                    : Skia/PDF m144\n"
 }
