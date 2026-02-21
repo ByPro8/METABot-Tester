@@ -299,6 +299,97 @@ def _timestamp_eval(exif_struct: Dict[str, Dict[str, str]], tpl: dict) -> dict |
 
 
 # -----------------------------
+# File size KB rule (min/max)
+# -----------------------------
+def _size_kb_eval(file_size_bytes: int | None, tpl: dict) -> dict | None:
+    """
+    File-size KB rule.
+
+    Template expects:
+      tpl["file_size_kb_rule"] = {
+        "enabled": true,
+        "min_kb": <float or int>,
+        "max_kb": <float or int>,
+        "sample_count": <int, optional>
+      }
+
+    Returns dict with:
+      ok: bool|None
+      kb: float|None
+      min_kb/max_kb: float|None
+      sample_count: int|None
+      rule: original rule dict
+      detail: fallback string
+    """
+    rule = tpl.get("file_size_kb_rule") or None
+    if not rule:
+        return None
+    if rule.get("enabled") is False:
+        return None
+
+    min_kb = rule.get("min_kb")
+    max_kb = rule.get("max_kb")
+    sample_count = rule.get("sample_count")
+
+    if file_size_bytes is None:
+        return {
+            "ok": None,
+            "kb": None,
+            "min_kb": min_kb,
+            "max_kb": max_kb,
+            "sample_count": sample_count,
+            "detail": "(file size missing)",
+            "rule": rule,
+            "label": "Size check",
+            "fail": False,
+        }
+
+    kb = file_size_bytes / 1024.0
+
+    ok: bool | None = True
+    if min_kb is not None:
+        try:
+            if kb < float(min_kb):
+                ok = False
+        except Exception:
+            ok = None
+    if max_kb is not None and ok is not False:
+        try:
+            if kb > float(max_kb):
+                ok = False
+        except Exception:
+            ok = None
+
+    # Fallback detail (used only if we cannot build the nice report line)
+    try:
+        if (min_kb is not None) and (max_kb is not None):
+            rng = f"{float(min_kb):.2f}–{float(max_kb):.2f} kB"
+        elif min_kb is not None:
+            rng = f">= {float(min_kb):.2f} kB"
+        elif max_kb is not None:
+            rng = f"<= {float(max_kb):.2f} kB"
+        else:
+            rng = "(no range)"
+        detail = f"{kb:.2f} kB (allowed {rng})"
+        if sample_count is not None:
+            detail += f" | from {int(sample_count)} pdfs"
+    except Exception:
+        detail = f"{kb:.2f} kB"
+
+    return {
+        "ok": ok,
+        "kb": kb,
+        "min_kb": min_kb,
+        "max_kb": max_kb,
+        "sample_count": sample_count,
+        "detail": detail,
+        "rule": rule,
+        "label": "Size check",
+        "fail": (ok is False),
+    }
+
+
+# -----------------------------
 # Group ordering (for display)
 # -----------------------------
 _GROUP_ORDER = [
@@ -414,7 +505,6 @@ def run_template_check(
             continue
         got = flat.get(k)
         if got is None:
-            # Missing key will be listed separately, but keep mismatch list clean.
             continue
         if got != expected:
             mismatches.append({"key": k, "expected": expected, "got": got})
@@ -424,6 +514,11 @@ def run_template_check(
     # Timestamp rule uses ORIGINAL exif_struct (not filtered)
     ts = _timestamp_eval(exif_struct, tpl)
     if ts and ts.get("fail"):
+        ok = False
+
+    # File size KB rule (enforced)
+    size_eval = _size_kb_eval(file_size_bytes, tpl)
+    if size_eval and size_eval.get("fail"):
         ok = False
 
     # -----------------------------
@@ -457,14 +552,61 @@ def run_template_check(
         )
 
     if file_size_bytes is not None:
-        report.append(
-            _kv("Size", _esc(f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"))
+        if size_eval:
+            # Match other banks: single "Size check" line with ✅/❌ and range + sample count.
+            kb = file_size_bytes / 1024.0
+            ok_sz = size_eval.get("ok")
+            cls_sz = "tc-warn" if ok_sz is None else ("tc-ok" if ok_sz else "tc-bad")
+            icon = "⚠️" if ok_sz is None else ("✅" if ok_sz else "❌")
+
+            min_kb = size_eval.get("min_kb")
+            max_kb = size_eval.get("max_kb")
+            scount = size_eval.get("sample_count")
+
+            tail: list[str] = []
+            try:
+                if (min_kb is not None) and (max_kb is not None):
+                    tail.append(f"range {float(min_kb):.2f}–{float(max_kb):.2f} kB")
+                elif min_kb is not None:
+                    tail.append(f"min {float(min_kb):.2f} kB")
+                elif max_kb is not None:
+                    tail.append(f"max {float(max_kb):.2f} kB")
+            except Exception:
+                pass
+
+            if scount is not None:
+                try:
+                    tail.append(f"from {int(scount)} pdfs")
+                except Exception:
+                    tail.append(f"from {scount} pdfs")
+
+            value_html = (
+                _span(f"{kb:.2f} kB {icon}", cls_sz)
+                + " "
+                + _esc(f"({file_size_bytes} bytes)")
+            )
+            if tail:
+                value_html += " | " + " | ".join(_esc(t) for t in tail)
+
+            report.append(_kv("Size check", value_html))
+        else:
+            report.append(
+                _kv(
+                    "Size",
+                    _esc(f"{_human_kb(file_size_bytes)} ({file_size_bytes} bytes)"),
+                )
+            )
+    elif size_eval:
+        cls_sz = (
+            "tc-warn"
+            if size_eval.get("ok") is None
+            else ("tc-ok" if size_eval.get("ok") else "tc-bad")
         )
+        report.append(_kv("Size check", _span(size_eval.get("detail", ""), cls_sz)))
 
     report.append("\n")
     report.append(_esc("---- COUNTS (meaningful keys, after ignores) ----\n"))
 
-    # Match Chromium formatting: show 0/N with N colored red if nonzero
     extra_ok = len(extra_keys) == 0
     missing_ok = len(missing_keys) == 0
     mismatch_ok = len(mismatches) == 0
@@ -509,7 +651,6 @@ def run_template_check(
 
     report.append("\n")
 
-    # Lists (same behavior as Chromium)
     if extra_keys:
         report.append(_span("EXTRA KEYS:", "tc-bad") + "\n")
         for k in extra_keys:
@@ -548,19 +689,17 @@ def run_template_check(
     report_html = "".join(report).rstrip() + "\n"
 
     # -----------------------------
-    # Template tab HTML (green on match, red on mismatch/missing)
+    # Template tab HTML
     # -----------------------------
     template_grouped: Dict[str, Dict[str, str]] = {}
     extracted_grouped: Dict[str, Dict[str, str]] = {}
 
-    # Build grouped from required keys so ordering is stable and complete
     for k in required_keys:
         group, tag = k.split(".", 1)
         template_grouped.setdefault(group, {})
         extracted_grouped.setdefault(group, {})
 
         if tag.startswith("PDFVersion#"):
-            # Display duplicates as two separate visible lines
             disp_tag = f"PDFVersion ({tag})"
             template_grouped[group][disp_tag] = expected_values.get(k, "(any)")
             extracted_grouped[group][disp_tag] = flat.get(k, "(missing)")
@@ -568,14 +707,12 @@ def run_template_check(
             template_grouped[group][tag] = expected_values.get(k, "(any)")
             extracted_grouped[group][tag] = flat.get(k, "(missing)")
 
-    # Template style rules: like Chromium
     template_style: Dict[str, Tuple[str, str]] = {}
     for k in required_keys:
         exp = expected_values.get(k, "(any)")
         got = flat.get(k)
         if got is None:
             template_style_key = k
-            # map PDFVersion# keys to displayed tag key
             if k.startswith("PDF.PDFVersion#"):
                 template_style_key = f"PDF.PDFVersion ({k.split('.',1)[1]})"
             template_style[template_style_key] = ("tc-bad", "tc-bad")
@@ -590,21 +727,17 @@ def run_template_check(
                 ("tc-ok", "tc-ok") if ok_val else ("tc-ok", "tc-bad")
             )
 
-    # Because our formatter expects style keys as "Group.Tag", we normalize:
     normalized_template_style: Dict[str, Tuple[str, str]] = {}
     for full, pair in template_style.items():
         if "." in full:
             normalized_template_style[full] = pair
-        else:
-            # never happens here
-            pass
 
     template_html = _format_grouped_log_html(
         template_grouped, normalized_template_style
     )
 
     # -----------------------------
-    # Extracted tab HTML (green matches; show expected note on mismatches)
+    # Extracted tab HTML
     # -----------------------------
     extracted_style: Dict[str, Tuple[str, str]] = {}
     extracted_with_expected_note: Dict[str, Dict[str, str]] = {}
@@ -612,14 +745,7 @@ def run_template_check(
     for group, kv in extracted_grouped.items():
         out_kv: Dict[str, str] = {}
         for tag, val in kv.items():
-            # map back to internal key
             if tag.startswith("PDFVersion (PDFVersion#"):
-                internal = (
-                    f"{group}.PDF.{tag[len('PDFVersion ('):-1]}"
-                    if group != "PDF"
-                    else f"PDF.{tag[len('PDFVersion ('):-1]}"
-                )
-                # internal becomes like "PDF.PDFVersion#1"
                 internal = f"PDF.{tag[len('PDFVersion ('):-1]}"
             else:
                 internal = f"{group}.{tag}"
@@ -667,8 +793,8 @@ def run_template_check(
         "extra_keys": extra_keys,
         "missing_keys": missing_keys,
         "mismatches": mismatches,
-        "size_rule": None,
-        "size_ok": None,
+        "size_rule": (size_eval.get("rule") if size_eval else None),
+        "size_ok": (size_eval.get("ok") if size_eval else None),
         "report_html": report_html,
         "template_html": template_html,
         "extracted_html": extracted_html,
